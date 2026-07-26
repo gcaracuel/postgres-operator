@@ -76,7 +76,7 @@ func (c *pg) RevokeRole(role, revoked string) error {
 
 func (c *pg) DropRole(role, newOwner, database string) error {
 	// REASSIGN OWNED BY only works if the correct database is selected
-	tmpDb, err := GetConnection(c.user, c.pass, c.host, database, c.args)
+	tmpDb, err := c.getConnection(database)
 	if err != nil {
 		if err.(*pq.Error).Code == "3D000" {
 			return nil // Database is does not exist (anymore)

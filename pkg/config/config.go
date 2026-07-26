@@ -10,14 +10,16 @@ import (
 )
 
 type Cfg struct {
-	PostgresHost      string
-	PostgresUser      string
-	PostgresPass      string
-	PostgresUriArgs   string
-	PostgresDefaultDb string
-	CloudProvider     CloudProvider
-	AnnotationFilter  string
-	KeepSecretName    bool
+	PostgresHost       string
+	PostgresUser       string
+	PostgresPass       string
+	PostgresUriArgs    string
+	PostgresDefaultDb  string
+	CloudProvider      CloudProvider
+	AnnotationFilter   string
+	KeepSecretName     bool
+	PostgresUseIAMAuth bool
+	AwsRegion          string
 }
 
 var (
@@ -43,6 +45,8 @@ func Get() *Cfg {
 		config.PostgresUriArgs = utils.MustGetEnv("POSTGRES_URI_ARGS")
 		config.PostgresDefaultDb = utils.GetEnv("POSTGRES_DEFAULT_DATABASE")
 		config.CloudProvider = ParseCloudProvider(utils.GetEnv("POSTGRES_CLOUD_PROVIDER"))
+		config.PostgresUseIAMAuth, _ = strconv.ParseBool(utils.GetEnv("POSTGRES_USE_IAM_AUTH"))
+		config.AwsRegion = utils.GetEnv("AWS_REGION")
 		config.AnnotationFilter = utils.GetEnv("POSTGRES_INSTANCE")
 		if value, err := strconv.ParseBool(utils.GetEnv("KEEP_SECRET_NAME")); err == nil {
 			config.KeepSecretName = value
