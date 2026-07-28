@@ -1,0 +1,20 @@
+apiVersion: db.movetokube.com/v1alpha1
+kind: PostgresExternalRole
+metadata:
+  labels:
+    app.kubernetes.io/name: postgresexternalrole
+    app.kubernetes.io/instance: postgresexternalrole-sample
+    app.kubernetes.io/part-of: postgres-operator
+  name: postgresexternalrole-sample
+spec:
+  # Fixed name of the PostgreSQL role (must already exist or will be created)
+  roleName: my-external-role
+  # Reference to the Postgres CR (database)
+  database: postgres-sample
+  # Privileges: OWNER, READ, or WRITE
+  privileges: READ
+  # Extra roles to grant (e.g., rds_iam for AWS IAM authentication)
+  # extraRoles:
+  #   - rds_iam
+  # Whether to create the role if it doesn't exist (default: true)
+  createIfNotExists: true
