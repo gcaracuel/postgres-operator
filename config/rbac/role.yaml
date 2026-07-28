@@ -40,7 +40,7 @@ rules:
   - apiGroups:
       - db.movetokube.com
     resources:
-      - postgresexternalroles
+      - postgresexternalusers
     verbs:
       - get
       - list
@@ -52,7 +52,7 @@ rules:
   - apiGroups:
       - db.movetokube.com
     resources:
-      - postgresexternalroles/status
+      - postgresexternalusers/status
     verbs:
       - get
       - update
@@ -60,6 +60,6 @@ rules:
   - apiGroups:
       - db.movetokube.com
     resources:
-      - postgresexternalroles/finalizers
+      - postgresexternalusers/finalizers
     verbs:
       - update

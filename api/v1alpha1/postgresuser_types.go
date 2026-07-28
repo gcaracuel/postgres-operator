@@ -43,9 +43,15 @@ type PostgresUserStatus struct {
 	PostgresLogin string `json:"postgresLogin"`
 	PostgresGroup string `json:"postgresGroup"`
 	DatabaseName  string `json:"databaseName"`
+	// Name of the Kubernetes Secret created with user credentials.
+	// +optional
+	SecretName string `json:"secretName,omitempty"`
 	// Reflects whether IAM authentication is enabled for this user.
 	// +optional
 	EnableIamAuth bool `json:"enableIamAuth"`
+	// Human-readable message describing the last action taken on the database.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -166,8 +166,8 @@ func main() {
 		logger.Error(err, "unable to create controller", "controller", "PostgresUser")
 		os.Exit(1)
 	}
-	if err = (controller.NewPostgresExternalRoleReconciler(mgr, cfg, pg)).SetupWithManager(mgr); err != nil {
-		logger.Error(err, "unable to create controller", "controller", "PostgresExternalRole")
+	if err = (controller.NewPostgresExternalUserReconciler(mgr, cfg, pg)).SetupWithManager(mgr); err != nil {
+		logger.Error(err, "unable to create controller", "controller", "PostgresExternalUser")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

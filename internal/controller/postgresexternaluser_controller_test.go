@@ -18,7 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("PostgresExternalRoleReconciler", func() {
+var _ = Describe("PostgresExternalUserReconciler", func() {
 	const (
 		name      = "test-external-role"
 		namespace = "operator"
@@ -30,7 +30,7 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 		req      reconcile.Request
 		mockCtrl *gomock.Controller
 		pg       *mockpg.MockPG
-		rp       *PostgresExternalRoleReconciler
+		rp       *PostgresExternalUserReconciler
 		cl       client.Client
 	)
 
@@ -60,21 +60,21 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 		return pgCR
 	}
 
-	// Helper: create a PostgresExternalRole CR
-	createExternalRoleCR := func(privileges string, extraRoles []string, createIfNotExists bool, markAsDeleted bool) *v1alpha1.PostgresExternalRole {
-		cr := &v1alpha1.PostgresExternalRole{
+	// Helper: create a PostgresExternalUser CR
+	createExternalRoleCR := func(privileges string, extraRoles []string, createIfNotExists bool, markAsDeleted bool) *v1alpha1.PostgresExternalUser {
+		cr := &v1alpha1.PostgresExternalUser{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
 			},
-			Spec: v1alpha1.PostgresExternalRoleSpec{
+			Spec: v1alpha1.PostgresExternalUserSpec{
 				RoleName:          roleName,
 				Database:          dbName,
 				Privileges:        privileges,
 				ExtraRoles:        extraRoles,
 				CreateIfNotExists: createIfNotExists,
 			},
-			Status: v1alpha1.PostgresExternalRoleStatus{},
+			Status: v1alpha1.PostgresExternalUserStatus{},
 		}
 		if markAsDeleted {
 			cr.SetFinalizers([]string{"finalizer.db.movetokube.com"})
@@ -92,12 +92,12 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 		cl = k8sClient
 
 		sc = scheme.Scheme
-		sc.AddKnownTypes(v1alpha1.GroupVersion, &v1alpha1.PostgresExternalRole{})
-		sc.AddKnownTypes(v1alpha1.GroupVersion, &v1alpha1.PostgresExternalRoleList{})
+		sc.AddKnownTypes(v1alpha1.GroupVersion, &v1alpha1.PostgresExternalUser{})
+		sc.AddKnownTypes(v1alpha1.GroupVersion, &v1alpha1.PostgresExternalUserList{})
 		sc.AddKnownTypes(v1alpha1.GroupVersion, &v1alpha1.Postgres{})
 		sc.AddKnownTypes(v1alpha1.GroupVersion, &v1alpha1.PostgresList{})
 
-		rp = &PostgresExternalRoleReconciler{
+		rp = &PostgresExternalUserReconciler{
 			Client: managerClient,
 			Scheme: sc,
 			pg:     pg,
@@ -112,15 +112,15 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 	})
 
 	AfterEach(func() {
-		// Clean up all PostgresExternalRole CRs
-		l := v1alpha1.PostgresExternalRoleList{}
+		// Clean up all PostgresExternalUser CRs
+		l := v1alpha1.PostgresExternalUserList{}
 		Expect(cl.List(ctx, &l)).NotTo(HaveOccurred())
 		for _, el := range l.Items {
 			org := el.DeepCopy()
 			el.SetFinalizers(nil)
 			Expect(cl.Patch(ctx, &el, client.MergeFrom(org))).To(BeNil())
 		}
-		Expect(cl.DeleteAllOf(ctx, &v1alpha1.PostgresExternalRole{}, client.InNamespace(namespace))).To(BeNil())
+		Expect(cl.DeleteAllOf(ctx, &v1alpha1.PostgresExternalUser{}, client.InNamespace(namespace))).To(BeNil())
 
 		// Clean up Postgres CRs
 		pl := v1alpha1.PostgresList{}
@@ -193,7 +193,7 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Requeue).To(BeFalse())
 
-				found := &v1alpha1.PostgresExternalRole{}
+				found := &v1alpha1.PostgresExternalUser{}
 				Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)).To(BeNil())
 				Expect(found.Status.Succeeded).To(BeTrue())
 				Expect(found.Status.RoleName).To(Equal(roleName))
@@ -216,7 +216,7 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Requeue).To(BeFalse())
 
-				found := &v1alpha1.PostgresExternalRole{}
+				found := &v1alpha1.PostgresExternalUser{}
 				Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)).To(BeNil())
 				Expect(found.Status.GroupRole).To(Equal(dbName + "-writer"))
 			})
@@ -236,7 +236,7 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Requeue).To(BeFalse())
 
-				found := &v1alpha1.PostgresExternalRole{}
+				found := &v1alpha1.PostgresExternalUser{}
 				Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)).To(BeNil())
 				Expect(found.Status.GroupRole).To(Equal(dbName + "-owner"))
 			})
@@ -273,7 +273,7 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Requeue).To(BeFalse())
 
-				found := &v1alpha1.PostgresExternalRole{}
+				found := &v1alpha1.PostgresExternalUser{}
 				Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)).To(BeNil())
 				Expect(found.Status.GrantedExtraRoles).To(ConsistOf("rds_iam"))
 			})
@@ -325,7 +325,7 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Requeue).To(BeFalse())
 
-				found := &v1alpha1.PostgresExternalRole{}
+				found := &v1alpha1.PostgresExternalUser{}
 				Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)).To(BeNil())
 				// Only the successful extra role should be in status
 				Expect(found.Status.GrantedExtraRoles).To(ConsistOf("another_role"))
@@ -345,7 +345,7 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 				_, err := rp.Reconcile(ctx, req)
 				Expect(err).NotTo(HaveOccurred())
 
-				found := &v1alpha1.PostgresExternalRole{}
+				found := &v1alpha1.PostgresExternalUser{}
 				Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)).To(BeNil())
 				Expect(found.GetFinalizers()).To(ContainElement("finalizer.db.movetokube.com"))
 			})
@@ -360,7 +360,7 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 		Context("role was previously created successfully", func() {
 			BeforeEach(func() {
 				cr := createExternalRoleCR("READ", []string{"rds_iam"}, true, false)
-				cr.Status = v1alpha1.PostgresExternalRoleStatus{
+				cr.Status = v1alpha1.PostgresExternalUserStatus{
 					Succeeded:     true,
 					RoleName:      roleName,
 					GroupRole:     dbName + "-reader",
@@ -386,7 +386,7 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 				Expect(res.Requeue).To(BeFalse())
 
 				// CR should be deleted (no finalizer = garbage collected)
-				found := &v1alpha1.PostgresExternalRole{}
+				found := &v1alpha1.PostgresExternalUser{}
 				err = cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)
 				Expect(errors.IsNotFound(err)).To(BeTrue())
 			})
@@ -394,19 +394,19 @@ var _ = Describe("PostgresExternalRoleReconciler", func() {
 
 		Context("role was not yet created (no status)", func() {
 			BeforeEach(func() {
-				cr := &v1alpha1.PostgresExternalRole{
+				cr := &v1alpha1.PostgresExternalUser{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       name,
 						Namespace:  namespace,
 						Finalizers: []string{"finalizer.db.movetokube.com"},
 					},
-					Spec: v1alpha1.PostgresExternalRoleSpec{
+					Spec: v1alpha1.PostgresExternalUserSpec{
 						RoleName:          roleName,
 						Database:          dbName,
 						Privileges:        "READ",
 						CreateIfNotExists: true,
 					},
-					Status: v1alpha1.PostgresExternalRoleStatus{},
+					Status: v1alpha1.PostgresExternalUserStatus{},
 				}
 				Expect(cl.Create(ctx, cr)).To(BeNil())
 				Expect(cl.Delete(ctx, cr, &client.DeleteOptions{GracePeriodSeconds: new(int64)})).To(BeNil())

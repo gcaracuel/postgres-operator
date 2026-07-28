@@ -89,11 +89,17 @@ spec:
                 description: Reflects whether IAM authentication is enabled for this
                   user.
                 type: boolean
+              message:
+                description: Human-readable message describing the last action taken on the database.
+                type: string
               postgresGroup:
                 type: string
               postgresLogin:
                 type: string
               postgresRole:
+                type: string
+              secretName:
+                description: Name of the Kubernetes Secret created with user credentials.
                 type: string
               succeeded:
                 type: boolean

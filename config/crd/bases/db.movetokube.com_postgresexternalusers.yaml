@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: postgresexternalroles.db.movetokube.com
+  name: postgresexternalusers.db.movetokube.com
 spec:
   group: db.movetokube.com
   names:
-    kind: PostgresExternalRole
-    listKind: PostgresExternalRoleList
-    plural: postgresexternalroles
-    singular: postgresexternalrole
+    kind: PostgresExternalUser
+    listKind: PostgresExternalUserList
+    plural: postgresexternalusers
+    singular: postgresexternaluser
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PostgresExternalRole is the Schema for the postgresexternalroles API.
+        description: PostgresExternalUser is the Schema for the postgresexternalusers API.
           It manages fixed-name PostgreSQL roles without passwords, suitable for
           externally-managed users (e.g., IAM-authenticated roles on AWS RDS).
         properties:
@@ -39,7 +39,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: PostgresExternalRoleSpec defines the desired state of PostgresExternalRole
+            description: PostgresExternalUserSpec defines the desired state of PostgresExternalUser
             properties:
               roleName:
                 description: |-
@@ -75,7 +75,7 @@ spec:
             - privileges
             type: object
           status:
-            description: PostgresExternalRoleStatus defines the observed state of PostgresExternalRole
+            description: PostgresExternalUserStatus defines the observed state of PostgresExternalUser
             properties:
               succeeded:
                 type: boolean
@@ -93,6 +93,9 @@ spec:
                 items:
                   type: string
                 type: array
+              message:
+                description: Human-readable message describing the last action taken on the database.
+                type: string
             required:
             - succeeded
             - roleName

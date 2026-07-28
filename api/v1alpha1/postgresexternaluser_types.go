@@ -4,8 +4,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PostgresExternalRoleSpec defines the desired state of PostgresExternalRole
-type PostgresExternalRoleSpec struct {
+// PostgresExternalUserSpec defines the desired state of PostgresExternalUser
+type PostgresExternalUserSpec struct {
 	// Fixed name of the role to create or assign permissions to.
 	// If the role already exists in PostgreSQL, it will be used as-is.
 	// If it does not exist, it will be created without a password (suitable for IAM-managed roles).
@@ -28,8 +28,8 @@ type PostgresExternalRoleSpec struct {
 	CreateIfNotExists bool `json:"createIfNotExists,omitempty"`
 }
 
-// PostgresExternalRoleStatus defines the observed state of PostgresExternalRole
-type PostgresExternalRoleStatus struct {
+// PostgresExternalUserStatus defines the observed state of PostgresExternalUser
+type PostgresExternalUserStatus struct {
 	Succeeded bool `json:"succeeded"`
 	// The role name as it exists in PostgreSQL.
 	RoleName string `json:"roleName"`
@@ -40,32 +40,35 @@ type PostgresExternalRoleStatus struct {
 	// Extra roles that have been granted to this role.
 	// +optional
 	GrantedExtraRoles []string `json:"grantedExtraRoles,omitempty"`
+	// Human-readable message describing the last action taken on the database.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced
 
-// PostgresExternalRole is the Schema for the postgresexternalroles API.
+// PostgresExternalUser is the Schema for the postgresexternalusers API.
 // It manages fixed-name PostgreSQL roles without passwords, suitable for
 // externally-managed users (e.g., IAM-authenticated roles on AWS RDS).
-type PostgresExternalRole struct {
+type PostgresExternalUser struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   PostgresExternalRoleSpec   `json:"spec,omitempty"`
-	Status PostgresExternalRoleStatus `json:"status,omitempty"`
+	Spec   PostgresExternalUserSpec   `json:"spec,omitempty"`
+	Status PostgresExternalUserStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// PostgresExternalRoleList contains a list of PostgresExternalRole
-type PostgresExternalRoleList struct {
+// PostgresExternalUserList contains a list of PostgresExternalUser
+type PostgresExternalUserList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []PostgresExternalRole `json:"items"`
+	Items           []PostgresExternalUser `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&PostgresExternalRole{}, &PostgresExternalRoleList{})
+	SchemeBuilder.Register(&PostgresExternalUser{}, &PostgresExternalUserList{})
 }

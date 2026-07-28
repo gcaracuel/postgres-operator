@@ -309,6 +309,8 @@ func (r *PostgresUserReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		// Secret created successfully - don't requeue
+		instance.Status.SecretName = secret.Name
+		instance.Status.Message = fmt.Sprintf("Created user %q with group %q in database %q", role, instance.Status.PostgresGroup, instance.Status.DatabaseName)
 		return r.finish(ctx, instance)
 	} else if err != nil {
 		return r.requeue(ctx, instance, err)

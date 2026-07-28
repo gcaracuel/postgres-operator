@@ -25,8 +25,8 @@ import (
 	"github.com/movetokube/postgres-operator/pkg/utils"
 )
 
-// PostgresExternalRoleReconciler reconciles a PostgresExternalRole object
-type PostgresExternalRoleReconciler struct {
+// PostgresExternalUserReconciler reconciles a PostgresExternalUser object
+type PostgresExternalUserReconciler struct {
 	client.Client
 	Scheme         *runtime.Scheme
 	pg             postgres.PG
@@ -34,9 +34,9 @@ type PostgresExternalRoleReconciler struct {
 	cloudProvider  config.CloudProvider
 }
 
-// NewPostgresExternalRoleReconciler returns a new reconcile.Reconciler
-func NewPostgresExternalRoleReconciler(mgr manager.Manager, cfg *config.Cfg, pg postgres.PG) *PostgresExternalRoleReconciler {
-	return &PostgresExternalRoleReconciler{
+// NewPostgresExternalUserReconciler returns a new reconcile.Reconciler
+func NewPostgresExternalUserReconciler(mgr manager.Manager, cfg *config.Cfg, pg postgres.PG) *PostgresExternalUserReconciler {
+	return &PostgresExternalUserReconciler{
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
 		pg:             pg,
@@ -45,18 +45,18 @@ func NewPostgresExternalRoleReconciler(mgr manager.Manager, cfg *config.Cfg, pg 
 	}
 }
 
-// +kubebuilder:rbac:groups=db.movetokube.com,resources=postgresexternalroles,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=db.movetokube.com,resources=postgresexternalroles/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=db.movetokube.com,resources=postgresexternalroles/finalizers,verbs=update
+// +kubebuilder:rbac:groups=db.movetokube.com,resources=postgresexternalusers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=db.movetokube.com,resources=postgresexternalusers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=db.movetokube.com,resources=postgresexternalusers/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop.
 // It ensures the fixed-name role exists in PostgreSQL and is granted the correct permissions.
-func (r *PostgresExternalRoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *PostgresExternalUserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	reqLogger.Info("Reconciling PostgresExternalRole")
+	reqLogger.Info("Reconciling PostgresExternalUser")
 
-	instance := &dbv1alpha1.PostgresExternalRole{}
+	instance := &dbv1alpha1.PostgresExternalUser{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -77,7 +77,7 @@ func (r *PostgresExternalRoleReconciler) Reconcile(ctx context.Context, req ctrl
 	return r.reconcileCreate(ctx, instance, reqLogger)
 }
 
-func (r *PostgresExternalRoleReconciler) reconcileDelete(ctx context.Context, instance *dbv1alpha1.PostgresExternalRole, reqLogger logr.Logger) (ctrl.Result, error) {
+func (r *PostgresExternalUserReconciler) reconcileDelete(ctx context.Context, instance *dbv1alpha1.PostgresExternalUser, reqLogger logr.Logger) (ctrl.Result, error) {
 	if instance.Status.Succeeded && instance.Status.RoleName != "" {
 		db := r.pg.GetDefaultDatabase()
 		postgres, err := r.getPostgresCR(ctx, instance)
@@ -115,7 +115,7 @@ func (r *PostgresExternalRoleReconciler) reconcileDelete(ctx context.Context, in
 	return ctrl.Result{}, nil
 }
 
-func (r *PostgresExternalRoleReconciler) reconcileCreate(ctx context.Context, instance *dbv1alpha1.PostgresExternalRole, reqLogger logr.Logger) (ctrl.Result, error) {
+func (r *PostgresExternalUserReconciler) reconcileCreate(ctx context.Context, instance *dbv1alpha1.PostgresExternalUser, reqLogger logr.Logger) (ctrl.Result, error) {
 	roleName := instance.Spec.RoleName
 	if roleName == "" {
 		return ctrl.Result{}, fmt.Errorf("roleName is required")
@@ -149,7 +149,6 @@ func (r *PostgresExternalRoleReconciler) reconcileCreate(ctx context.Context, in
 
 	// Create the role if it doesn't exist (no password, no login)
 	if instance.Spec.CreateIfNotExists {
-		// Use CreateGroupRole which is idempotent (no-op if role already exists)
 		if err := r.pg.CreateGroupRole(roleName); err != nil {
 			return r.requeue(ctx, instance, fmt.Errorf("create role %s: %w", roleName, err))
 		}
@@ -170,11 +169,18 @@ func (r *PostgresExternalRoleReconciler) reconcileCreate(ctx context.Context, in
 		grantedExtras = append(grantedExtras, extra)
 	}
 
+	// Build status message
+	msg := fmt.Sprintf("Granted role %q to %q", groupRole, roleName)
+	if len(grantedExtras) > 0 {
+		msg += fmt.Sprintf("; granted extra roles: %v", grantedExtras)
+	}
+
 	// Update status
 	instance.Status.RoleName = roleName
 	instance.Status.GroupRole = groupRole
 	instance.Status.DatabaseName = database.Spec.Database
 	instance.Status.GrantedExtraRoles = grantedExtras
+	instance.Status.Message = msg
 	instance.Status.Succeeded = true
 	if err := r.Status().Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
@@ -193,7 +199,7 @@ func (r *PostgresExternalRoleReconciler) reconcileCreate(ctx context.Context, in
 	return ctrl.Result{}, nil
 }
 
-func (r *PostgresExternalRoleReconciler) getPostgresCR(ctx context.Context, instance *dbv1alpha1.PostgresExternalRole) (*dbv1alpha1.Postgres, error) {
+func (r *PostgresExternalUserReconciler) getPostgresCR(ctx context.Context, instance *dbv1alpha1.PostgresExternalUser) (*dbv1alpha1.Postgres, error) {
 	database := dbv1alpha1.Postgres{}
 	err := r.Get(ctx,
 		types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.Database}, &database)
@@ -209,7 +215,7 @@ func (r *PostgresExternalRoleReconciler) getPostgresCR(ctx context.Context, inst
 	return &database, nil
 }
 
-func (r *PostgresExternalRoleReconciler) addFinalizer(ctx context.Context, instance *dbv1alpha1.PostgresExternalRole) error {
+func (r *PostgresExternalUserReconciler) addFinalizer(ctx context.Context, instance *dbv1alpha1.PostgresExternalUser) error {
 	if len(instance.GetFinalizers()) < 1 && instance.GetDeletionTimestamp() == nil {
 		instance.SetFinalizers([]string{"finalizer.db.movetokube.com"})
 		return r.Update(ctx, instance)
@@ -217,7 +223,7 @@ func (r *PostgresExternalRoleReconciler) addFinalizer(ctx context.Context, insta
 	return nil
 }
 
-func (r *PostgresExternalRoleReconciler) requeue(ctx context.Context, cr *dbv1alpha1.PostgresExternalRole, reason error) (ctrl.Result, error) {
+func (r *PostgresExternalUserReconciler) requeue(ctx context.Context, cr *dbv1alpha1.PostgresExternalUser, reason error) (ctrl.Result, error) {
 	cr.Status.Succeeded = false
 	if err := r.Status().Update(ctx, cr); err != nil {
 		return ctrl.Result{}, err
@@ -225,15 +231,15 @@ func (r *PostgresExternalRoleReconciler) requeue(ctx context.Context, cr *dbv1al
 	return ctrl.Result{}, reason
 }
 
-// findExternalRolesForPostgres returns reconcile requests for all PostgresExternalRoles
+// findExternalUsersForPostgres returns reconcile requests for all PostgresExternalUsers
 // that reference the given Postgres CR by name within the same namespace.
-func (r *PostgresExternalRoleReconciler) findExternalRolesForPostgres(ctx context.Context, obj client.Object) []reconcile.Request {
+func (r *PostgresExternalUserReconciler) findExternalUsersForPostgres(ctx context.Context, obj client.Object) []reconcile.Request {
 	postgres := obj.(*dbv1alpha1.Postgres)
 	logger := log.FromContext(ctx)
 
-	var list dbv1alpha1.PostgresExternalRoleList
+	var list dbv1alpha1.PostgresExternalUserList
 	if err := r.List(ctx, &list, client.InNamespace(postgres.Namespace)); err != nil {
-		logger.Error(err, "Failed to list PostgresExternalRoles for Postgres CR", "postgres", postgres.Name)
+		logger.Error(err, "Failed to list PostgresExternalUsers for Postgres CR", "postgres", postgres.Name)
 		return nil
 	}
 
@@ -252,12 +258,12 @@ func (r *PostgresExternalRoleReconciler) findExternalRolesForPostgres(ctx contex
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *PostgresExternalRoleReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *PostgresExternalUserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&dbv1alpha1.PostgresExternalRole{}).
+		For(&dbv1alpha1.PostgresExternalUser{}).
 		Watches(
 			&dbv1alpha1.Postgres{},
-			handler.EnqueueRequestsFromMapFunc(r.findExternalRolesForPostgres),
+			handler.EnqueueRequestsFromMapFunc(r.findExternalUsersForPostgres),
 			builder.WithPredicates(predicate.Funcs{
 				CreateFunc: func(e event.CreateEvent) bool {
 					pg := e.Object.(*dbv1alpha1.Postgres)

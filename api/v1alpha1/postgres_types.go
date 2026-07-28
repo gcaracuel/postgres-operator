@@ -32,6 +32,9 @@ type PostgresStatus struct {
 	// +optional
 	// +listType=set
 	Extensions []string `json:"extensions,omitempty"`
+	// Human-readable message describing the last action taken on the database.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // PostgresRoles stores the different group roles for database
