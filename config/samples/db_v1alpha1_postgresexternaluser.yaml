@@ -16,5 +16,8 @@ spec:
   # Extra roles to grant (e.g., rds_iam for AWS IAM authentication)
   # extraRoles:
   #   - rds_iam
+  # AWS IAM authentication (requires POSTGRES_CLOUD_PROVIDER=AWS)
+  # aws:
+  #   enableIamAuth: true
   # Whether to create the role if it doesn't exist (default: true)
   createIfNotExists: true

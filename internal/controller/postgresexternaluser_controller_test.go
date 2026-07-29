@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/movetokube/postgres-operator/api/v1alpha1"
+	"github.com/movetokube/postgres-operator/pkg/config"
 	mockpg "github.com/movetokube/postgres-operator/pkg/postgres/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -305,6 +306,84 @@ var _ = Describe("PostgresExternalUserReconciler", func() {
 				_, err := rp.Reconcile(ctx, req)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("grant role"))
+			})
+		})
+
+		Context("IAM auth enable", func() {
+			BeforeEach(func() {
+				cr := createExternalRoleCR("READ", nil, true, false)
+				cr.Spec.AWS = &v1alpha1.PostgresExternalUserAWSSpec{EnableIamAuth: true}
+				Expect(cl.Update(ctx, cr)).To(BeNil())
+				rp.cloudProvider = config.CloudProviderAWS
+			})
+
+			It("should grant rds_iam role", func() {
+				pg.EXPECT().CreateGroupRole(roleName).Return(nil)
+				pg.EXPECT().GrantRole(dbName+"-reader", roleName).Return(nil)
+				pg.EXPECT().GrantRole("rds_iam", roleName).Return(nil)
+				pg.EXPECT().GetDefaultDatabase().Return("postgres").AnyTimes()
+
+				res, err := rp.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res.Requeue).To(BeFalse())
+
+				found := &v1alpha1.PostgresExternalUser{}
+				Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)).To(BeNil())
+				Expect(found.Status.EnableIamAuth).To(BeTrue())
+				Expect(found.Status.Message).To(ContainSubstring("IAM auth enabled"))
+			})
+		})
+
+		Context("IAM auth disable", func() {
+			BeforeEach(func() {
+				cr := createExternalRoleCR("READ", nil, true, false)
+				cr.Status = v1alpha1.PostgresExternalUserStatus{
+					Succeeded:     true,
+					RoleName:      roleName,
+					GroupRole:     dbName + "-reader",
+					DatabaseName:  dbName,
+					EnableIamAuth: true,
+				}
+				Expect(cl.Status().Update(ctx, cr)).To(BeNil())
+				rp.cloudProvider = config.CloudProviderAWS
+			})
+
+			It("should revoke rds_iam role", func() {
+				pg.EXPECT().CreateGroupRole(roleName).Return(nil)
+				pg.EXPECT().GrantRole(dbName+"-reader", roleName).Return(nil)
+				pg.EXPECT().RevokeRole("rds_iam", roleName).Return(nil)
+				pg.EXPECT().GetDefaultDatabase().Return("postgres").AnyTimes()
+
+				res, err := rp.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res.Requeue).To(BeFalse())
+
+				found := &v1alpha1.PostgresExternalUser{}
+				Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)).To(BeNil())
+				Expect(found.Status.EnableIamAuth).To(BeFalse())
+			})
+		})
+
+		Context("IAM auth requested but not AWS provider", func() {
+			BeforeEach(func() {
+				cr := createExternalRoleCR("READ", nil, true, false)
+				cr.Spec.AWS = &v1alpha1.PostgresExternalUserAWSSpec{EnableIamAuth: true}
+				Expect(cl.Update(ctx, cr)).To(BeNil())
+				rp.cloudProvider = config.CloudProviderNone
+			})
+
+			It("should not grant rds_iam and log a warning", func() {
+				pg.EXPECT().CreateGroupRole(roleName).Return(nil)
+				pg.EXPECT().GrantRole(dbName+"-reader", roleName).Return(nil)
+				pg.EXPECT().GetDefaultDatabase().Return("postgres").AnyTimes()
+
+				res, err := rp.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res.Requeue).To(BeFalse())
+
+				found := &v1alpha1.PostgresExternalUser{}
+				Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)).To(BeNil())
+				Expect(found.Status.EnableIamAuth).To(BeFalse())
 			})
 		})
 

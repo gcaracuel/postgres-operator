@@ -169,10 +169,36 @@ func (r *PostgresExternalUserReconciler) reconcileCreate(ctx context.Context, in
 		grantedExtras = append(grantedExtras, extra)
 	}
 
+	// Handle IAM auth
+	awsConfig := instance.Spec.AWS
+	awsIamRequested := awsConfig != nil && awsConfig.EnableIamAuth
+
+	if r.cloudProvider == config.CloudProviderAWS {
+		if awsIamRequested && !instance.Status.EnableIamAuth {
+			if err := r.pg.GrantRole("rds_iam", roleName); err != nil {
+				return r.requeue(ctx, instance, fmt.Errorf("grant rds_iam to %s: %w", roleName, err))
+			}
+			instance.Status.EnableIamAuth = true
+			grantedExtras = append(grantedExtras, "rds_iam")
+		}
+
+		if !awsIamRequested && instance.Status.EnableIamAuth {
+			if err := r.pg.RevokeRole("rds_iam", roleName); err != nil {
+				return r.requeue(ctx, instance, fmt.Errorf("revoke rds_iam from %s: %w", roleName, err))
+			}
+			instance.Status.EnableIamAuth = false
+		}
+	} else if awsIamRequested {
+		reqLogger.WithValues("role", roleName).Info("IAM Auth requested while not running with AWS cloud provider config")
+	}
+
 	// Build status message
 	msg := fmt.Sprintf("Granted role '%s' to '%s'", groupRole, roleName)
 	if len(grantedExtras) > 0 {
 		msg += fmt.Sprintf("; granted extra roles: %v", grantedExtras)
+	}
+	if awsIamRequested {
+		msg += "; IAM auth enabled"
 	}
 
 	// Update status

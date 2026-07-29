@@ -26,6 +26,18 @@ type PostgresExternalUserSpec struct {
 	// +optional
 	// +kubebuilder:default=true
 	CreateIfNotExists bool `json:"createIfNotExists,omitempty"`
+	// AWS specific configuration.
+	// +optional
+	AWS *PostgresExternalUserAWSSpec `json:"aws,omitempty"`
+}
+
+// PostgresExternalUserAWSSpec encapsulates AWS specific configuration toggles for PostgresExternalUser.
+type PostgresExternalUserAWSSpec struct {
+	// +optional
+	// +kubebuilder:default=false
+	// Enable IAM authentication for this role (PostgreSQL on AWS RDS only).
+	// Grants the rds_iam role to this role, allowing IAM database authentication.
+	EnableIamAuth bool `json:"enableIamAuth,omitempty"`
 }
 
 // PostgresExternalUserStatus defines the observed state of PostgresExternalUser
@@ -40,6 +52,9 @@ type PostgresExternalUserStatus struct {
 	// Extra roles that have been granted to this role.
 	// +optional
 	GrantedExtraRoles []string `json:"grantedExtraRoles,omitempty"`
+	// Reflects whether IAM authentication is enabled for this role.
+	// +optional
+	EnableIamAuth bool `json:"enableIamAuth"`
 	// Human-readable message describing the last action taken on the database.
 	// +optional
 	Message string `json:"message,omitempty"`
