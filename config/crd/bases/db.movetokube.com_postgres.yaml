@@ -66,6 +66,9 @@ spec:
                   type: string
                 type: array
                 x-kubernetes-list-type: set
+              message:
+                description: Human-readable message describing the last action taken on the database.
+                type: string
               roles:
                 description: PostgresRoles stores the different group roles for database
                 properties:
