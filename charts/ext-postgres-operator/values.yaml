@@ -90,6 +90,20 @@ postgres:
   # default database to use
   default_database: "postgres"
 
+# IRSA (IAM Roles for Service Accounts) configuration for EKS.
+# When enabled, the operator uses IAM database authentication to connect to RDS
+# instead of a static password. Requires the RDS instance to have IAM database
+# authentication enabled and a database user mapped to the IAM role.
+# See the README for a full setup guide.
+irsa:
+  # Enable IRSA and IAM database authentication
+  enabled: false
+  # ARN of the IAM role to associate with the operator's service account
+  roleArn: ""
+  # AWS region where the RDS instance is deployed (e.g. eu-west-1)
+  # If not set, falls back to the AWS_REGION environment variable or AWS SDK default
+  region: ""
+
 # Volumes to add to the pod.
 volumes: []
 

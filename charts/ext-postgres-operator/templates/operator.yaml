@@ -62,6 +62,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            {{- if .Values.irsa.enabled }}
+            - name: POSTGRES_USE_IAM_AUTH
+              value: "true"
+            - name: AWS_REGION
+              value: {{ .Values.irsa.region | quote }}
+            {{- end }}
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
