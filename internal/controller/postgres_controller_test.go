@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/movetokube/postgres-operator/api/v1alpha1"
+	"github.com/movetokube/postgres-operator/pkg/postgres"
 	mockpg "github.com/movetokube/postgres-operator/pkg/postgres/mock"
 	"github.com/movetokube/postgres-operator/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -643,10 +644,10 @@ var _ = Describe("PostgresReconciler", func() {
 					// Expected method calls
 					// customers schema
 					pg.EXPECT().CreateSchema(name, name+"-group", "customers").Return(nil).Times(1)
-					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).Times(3)
+					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).Times(6)
 					// stores schema
 					pg.EXPECT().CreateSchema(name, name+"-group", "stores").Return(nil).Times(1)
-					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).Times(3)
+					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).Times(6)
 				})
 
 				It("should update status", func() {
@@ -665,7 +666,7 @@ var _ = Describe("PostgresReconciler", func() {
 					// Expected method calls
 					// customers schema errors
 					pg.EXPECT().CreateSchema(name, name+"-group", "customers").Return(fmt.Errorf("Could not create schema")).Times(1)
-					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).Times(0)
+					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).Times(6)
 					// stores schema
 					pg.EXPECT().CreateSchema(name, name+"-group", "stores").Return(nil).Times(1)
 					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).AnyTimes()
@@ -696,10 +697,10 @@ var _ = Describe("PostgresReconciler", func() {
 				It("should not recreate existing schema", func() {
 					// customers schema
 					pg.EXPECT().CreateSchema(name, name+"-group", "customers").Return(nil).Times(1)
-					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).AnyTimes()
+					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).Times(6)
 					// stores schema already exists
 					pg.EXPECT().CreateSchema(name, name+"-group", "stores").Times(0)
-					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).Times(0)
+					pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).AnyTimes()
 					// Call reconcile
 					err := runReconcile(rp, ctx, req)
 					Expect(err).NotTo(HaveOccurred())
@@ -708,6 +709,108 @@ var _ = Describe("PostgresReconciler", func() {
 					Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, foundPostgres)).To(BeNil())
 					Expect(foundPostgres.Status.Schemas).To(ConsistOf("stores", "customers"))
 				})
+			})
+		})
+	})
+
+	Context("Default privileges with FOR ROLE clause", func() {
+		var postgresCR *v1alpha1.Postgres
+		BeforeEach(func() {
+			postgresCR = &v1alpha1.Postgres{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: v1alpha1.PostgresSpec{
+					Database: name,
+					Schemas:  []string{"customers"},
+				},
+				Status: v1alpha1.PostgresStatus{
+					Succeeded: true,
+					Roles: v1alpha1.PostgresRoles{
+						Owner:  name + "-group",
+						Reader: name + "-reader",
+						Writer: name + "-writer",
+					},
+				},
+			}
+		})
+
+		Context("Creation is successful", func() {
+			BeforeEach(func() {
+				initClient(postgresCR, false)
+				// Expected method calls for schema "customers"
+				pg.EXPECT().CreateSchema(name, name+"-group", "customers").Return(nil).Times(1)
+
+				// CreatorRole = owner ("test-db-group"): default privs for objects created by owner role
+				pg.EXPECT().SetSchemaPrivileges(postgres.PostgresSchemaPrivileges{
+					DB:           name,
+					Role:         name + "-reader",
+					CreatorRole:  name + "-group",
+					Schema:       "customers",
+					Privs:        "SELECT",
+					CreateSchema: false,
+				}).Return(nil).Times(1)
+				pg.EXPECT().SetSchemaPrivileges(postgres.PostgresSchemaPrivileges{
+					DB:            name,
+					Role:          name + "-writer",
+					CreatorRole:   name + "-group",
+					Schema:        "customers",
+					Privs:         "SELECT,INSERT,DELETE,UPDATE",
+					SequencePrivs: "USAGE,SELECT",
+					FunctionPrivs: "EXECUTE",
+					CreateSchema:  true,
+				}).Return(nil).Times(1)
+				pg.EXPECT().SetSchemaPrivileges(postgres.PostgresSchemaPrivileges{
+					DB:            name,
+					Role:          name + "-group",
+					CreatorRole:   name + "-group",
+					Schema:        "customers",
+					Privs:         "ALL",
+					SequencePrivs: "ALL",
+					FunctionPrivs: "ALL",
+					CreateSchema:  true,
+				}).Return(nil).Times(1)
+
+				// CreatorRole = writer ("test-db-writer"): default privs for objects created by writer role
+				pg.EXPECT().SetSchemaPrivileges(postgres.PostgresSchemaPrivileges{
+					DB:           name,
+					Role:         name + "-reader",
+					CreatorRole:  name + "-writer",
+					Schema:       "customers",
+					Privs:        "SELECT",
+					CreateSchema: false,
+				}).Return(nil).Times(1)
+				pg.EXPECT().SetSchemaPrivileges(postgres.PostgresSchemaPrivileges{
+					DB:            name,
+					Role:          name + "-writer",
+					CreatorRole:   name + "-writer",
+					Schema:        "customers",
+					Privs:         "SELECT,INSERT,DELETE,UPDATE",
+					SequencePrivs: "USAGE,SELECT",
+					FunctionPrivs: "EXECUTE",
+					CreateSchema:  true,
+				}).Return(nil).Times(1)
+				pg.EXPECT().SetSchemaPrivileges(postgres.PostgresSchemaPrivileges{
+					DB:            name,
+					Role:          name + "-group",
+					CreatorRole:   name + "-writer",
+					Schema:        "customers",
+					Privs:         "ALL",
+					SequencePrivs: "ALL",
+					FunctionPrivs: "ALL",
+					CreateSchema:  true,
+				}).Return(nil).Times(1)
+			})
+
+			It("should set default privileges for both owner and writer as creator roles", func() {
+				// Call reconcile
+				err := runReconcile(rp, ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				// Check updated Postgres
+				foundPostgres := &v1alpha1.Postgres{}
+				Expect(cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, foundPostgres)).To(BeNil())
+				Expect(foundPostgres.Status.Schemas).To(ConsistOf("customers"))
 			})
 		})
 	})
