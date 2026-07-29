@@ -1,7 +1,7 @@
 apiVersion: v2
 name: ext-postgres-operator
 description: |
-  A Helm chart for the External Postgres operator
+  A Helm chart for the External Postgres operator (fork of movetokube/postgres-operator)
 
   helm repo add ext-postgres-operator https://movetokube.github.io/postgres-operator/
   helm upgrade --install -n operators ext-postgres-operator  ext-postgres-operator/ext-postgres-operator

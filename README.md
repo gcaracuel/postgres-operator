@@ -1,7 +1,8 @@
 # External PostgreSQL Server Operator for Kubernetes
 
-[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/ext-postgres-operator)](https://artifacthub.io/packages/search?repo=ext-postgres-operator)
-[![Sponsor](https://img.shields.io/badge/Sponsor_on_GitHub-ff69b4?style=for-the-badge&logo=github)](https://github.com/sponsors/hitman99)
+> **Fork Notice:** This project is a fork of [movetokube/postgres-operator](https://github.com/movetokube/postgres-operator).
+> It extends the original with additional features while maintaining full compatibility.
+> See [License](#license) for details.
 
 Manage external PostgreSQL databases in Kubernetes with ease—supporting AWS RDS, Azure Database for PostgreSQL, GCP Cloud SQL, and more.
 
@@ -9,7 +10,6 @@ Manage external PostgreSQL databases in Kubernetes with ease—supporting AWS RD
 
 ## Table of Contents
 
-- [Sponsors](#sponsors)
 - [Features](#features)
 - [Supported Cloud Providers](#supported-cloud-providers)
 - [Configuration](#configuration)
@@ -23,13 +23,6 @@ Manage external PostgreSQL databases in Kubernetes with ease—supporting AWS RD
 
 ---
 
-## Sponsors
-
-Please consider supporting this project!
-
-**Current Sponsors:**
-_None yet. [Become a sponsor!](https://github.com/sponsors/hitman99)_
-
 ## Features
 
 - Create databases and roles using Kubernetes CRs
@@ -39,6 +32,7 @@ _None yet. [Become a sponsor!](https://github.com/sponsors/hitman99)_
 - Supports AWS RDS, Azure Database for PostgreSQL, and GCP Cloud SQL
 - Handles CRs in dynamically created namespaces
 - Customizable secret values using templates
+- Fixed-name external roles without passwords (for IAM-managed users)
 
 ---
 
@@ -208,6 +202,25 @@ Every PostgresUser has a generated Kubernetes secret attached to it, which conta
 |----------------|-------------------------------------------------------------------|
 | `mergeUriArgs` | Merge any provided uri args with any set in the `Postgres` CR     |
 
+### PostgresExternalUser
+
+```yaml
+apiVersion: db.movetokube.com/v1alpha1
+kind: PostgresExternalUser
+metadata:
+  name: my-external-user
+  namespace: app
+spec:
+  roleName: my-iam-role          # Fixed name of the PostgreSQL role
+  database: my-db                # References the Postgres CR
+  privileges: READ               # OWNER, READ, or WRITE
+  extraRoles:                     # Optional extra roles to grant
+    - rds_iam
+  createIfNotExists: true         # Create role if it doesn't exist (default)
+```
+
+This manages fixed-name PostgreSQL roles without passwords, suitable for externally-managed users (e.g., IAM-authenticated roles on AWS RDS). Unlike `PostgresUser`, no Kubernetes Secret is created.
+
 ### Multiple operator support
 
 Run multiple operator instances by setting unique POSTGRES_INSTANCE values and using annotations in your CRs to assign them.
@@ -256,4 +269,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is a fork of [movetokube/postgres-operator](https://github.com/movetokube/postgres-operator).
+Licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
