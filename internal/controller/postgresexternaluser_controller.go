@@ -88,23 +88,28 @@ func (r *PostgresExternalUserReconciler) reconcileDelete(ctx context.Context, in
 			db = instance.Status.DatabaseName
 		}
 
-		// Revoke group role membership
+		// Revoke group role membership (always do this — it's what this CR added)
 		if instance.Status.GroupRole != "" {
 			if err := r.pg.RevokeRole(instance.Status.GroupRole, instance.Status.RoleName); err != nil {
 				reqLogger.Error(err, "failed to revoke group role", "role", instance.Status.RoleName, "group", instance.Status.GroupRole)
 			}
 		}
 
-		// Revoke extra roles
+		// Revoke extra roles, except rds_iam (managed by IAM flag, not by deletion)
 		for _, extra := range instance.Status.GrantedExtraRoles {
+			if extra == "rds_iam" {
+				continue
+			}
 			if err := r.pg.RevokeRole(extra, instance.Status.RoleName); err != nil {
 				reqLogger.Error(err, "failed to revoke extra role", "role", instance.Status.RoleName, "extra", extra)
 			}
 		}
 
-		// Drop the role (no-op if role doesn't exist or is managed externally)
+		// Try to drop the role. If it has other role memberships or owns objects,
+		// the DROP will fail — that's fine, we just leave the role in place.
 		if err := r.pg.DropRole(instance.Status.RoleName, r.pg.GetUser(), db); err != nil {
-			reqLogger.Error(err, "failed to drop role", "role", instance.Status.RoleName)
+			reqLogger.Info("role not dropped (may have other memberships or objects), group role revoked",
+				"role", instance.Status.RoleName, "error", err)
 		}
 	}
 

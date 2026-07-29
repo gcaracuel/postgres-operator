@@ -453,10 +453,11 @@ var _ = Describe("PostgresExternalUserReconciler", func() {
 				Expect(cl.Delete(ctx, cr, &client.DeleteOptions{GracePeriodSeconds: new(int64)})).To(BeNil())
 			})
 
-			It("should revoke group role, extra roles, and drop role", func() {
+			It("should revoke group role, skip rds_iam, and attempt drop", func() {
 				pg.EXPECT().GetDefaultDatabase().Return("postgres")
 				pg.EXPECT().RevokeRole(dbName+"-reader", roleName).Return(nil)
-				pg.EXPECT().RevokeRole("rds_iam", roleName).Return(nil)
+				// rds_iam should NOT be revoked (managed by IAM flag, not deletion)
+				pg.EXPECT().RevokeRole("rds_iam", roleName).Times(0)
 				pg.EXPECT().DropRole(roleName, "pguser", dbName).Return(nil)
 				pg.EXPECT().GetUser().Return("pguser")
 
@@ -468,6 +469,17 @@ var _ = Describe("PostgresExternalUserReconciler", func() {
 				found := &v1alpha1.PostgresExternalUser{}
 				err = cl.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, found)
 				Expect(errors.IsNotFound(err)).To(BeTrue())
+			})
+
+			It("should not fail reconcile if drop fails (role has other memberships)", func() {
+				pg.EXPECT().GetDefaultDatabase().Return("postgres")
+				pg.EXPECT().RevokeRole(dbName+"-reader", roleName).Return(nil)
+				pg.EXPECT().DropRole(roleName, "pguser", dbName).Return(fmt.Errorf("role has other memberships"))
+				pg.EXPECT().GetUser().Return("pguser")
+
+				res, err := rp.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res.Requeue).To(BeFalse())
 			})
 		})
 
