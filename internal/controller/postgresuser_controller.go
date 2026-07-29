@@ -369,6 +369,10 @@ func (r *PostgresUserReconciler) newSecretForCR(reqLogger logr.Logger, cr *dbv1a
 	pgUserUrl := fmt.Sprintf("postgresql://%s:%s@%s/%s", role, password, r.pgHost, cr.Status.DatabaseName)
 	pgJDBCUrl := fmt.Sprintf("jdbc:postgresql://%s/%s", r.pgHost, cr.Status.DatabaseName)
 	pgDotnetUrl := fmt.Sprintf("User ID=%s;Password=%s;Host=%s;Port=%s;Database=%s;", role, password, hostname, port, cr.Status.DatabaseName)
+	pgDSN := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s", hostname, port, role, password, cr.Status.DatabaseName)
+	if r.pgUriArgs != "" {
+		pgDSN += " " + r.pgUriArgs
+	}
 	labels := map[string]string{
 		"app": cr.Name,
 	}
@@ -398,6 +402,7 @@ func (r *PostgresUserReconciler) newSecretForCR(reqLogger logr.Logger, cr *dbv1a
 		"POSTGRES_URL":        []byte(pgUserUrl),
 		"POSTGRES_JDBC_URL":   []byte(pgJDBCUrl),
 		"POSTGRES_DOTNET_URL": []byte(pgDotnetUrl),
+		"POSTGRES_DSN":        []byte(pgDSN),
 		"HOST":                []byte(r.pgHost),
 		"DATABASE_NAME":       []byte(cr.Status.DatabaseName),
 		"URI_ARGS":            []byte(r.pgUriArgs),
