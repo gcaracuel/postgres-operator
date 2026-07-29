@@ -13,9 +13,9 @@ spec:
   database: postgres-sample
   # Privileges: OWNER, READ, or WRITE
   privileges: READ
-  # Extra roles to grant (e.g., rds_iam for AWS IAM authentication)
+  # Extra roles to grant
   # extraRoles:
-  #   - rds_iam
+  #   - some-other-role
   # AWS IAM authentication (requires POSTGRES_CLOUD_PROVIDER=AWS)
   # aws:
   #   enableIamAuth: true
