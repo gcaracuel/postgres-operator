@@ -170,7 +170,7 @@ func (r *PostgresExternalUserReconciler) reconcileCreate(ctx context.Context, in
 	}
 
 	// Build status message
-	msg := fmt.Sprintf("Granted role %q to %q", groupRole, roleName)
+	msg := fmt.Sprintf("Granted role '%s' to '%s'", groupRole, roleName)
 	if len(grantedExtras) > 0 {
 		msg += fmt.Sprintf("; granted extra roles: %v", grantedExtras)
 	}

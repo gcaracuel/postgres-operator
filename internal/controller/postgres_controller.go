@@ -167,7 +167,7 @@ func (r *PostgresReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		instance.Status.Roles.Writer = writer
 		instance.Status.Succeeded = true
-		instance.Status.Message = fmt.Sprintf("Created database %q with roles: owner=%s, reader=%s, writer=%s",
+		instance.Status.Message = fmt.Sprintf("Created database '%s' with roles: owner=%s, reader=%s, writer=%s",
 			instance.Spec.Database, owner, reader, writer)
 	}
 
