@@ -12,6 +12,7 @@ const (
 	CREATE_USER_ROLE    = `CREATE ROLE "%s" WITH LOGIN PASSWORD '%s'`
 	GRANT_ROLE          = `GRANT "%s" TO "%s"`
 	ALTER_USER_SET_ROLE = `ALTER USER "%s" SET ROLE "%s"`
+	ALTER_ROLE_LOGIN    = `ALTER ROLE "%s" WITH LOGIN`
 	REVOKE_ROLE         = `REVOKE "%s" FROM "%s"`
 	UPDATE_PASSWORD     = `ALTER ROLE "%s" WITH PASSWORD '%s'`
 	DROP_ROLE           = `DROP ROLE "%s"`
@@ -112,5 +113,13 @@ func (c *pg) UpdatePassword(role, password string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (c *pg) AlterRoleLogin(role string) error {
+	_, err := c.db.Exec(fmt.Sprintf(ALTER_ROLE_LOGIN, role))
+	if err != nil {
+		return err
+	}
 	return nil
 }

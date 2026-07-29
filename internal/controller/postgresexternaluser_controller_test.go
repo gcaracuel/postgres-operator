@@ -320,6 +320,7 @@ var _ = Describe("PostgresExternalUserReconciler", func() {
 			It("should grant rds_iam role", func() {
 				pg.EXPECT().CreateGroupRole(roleName).Return(nil)
 				pg.EXPECT().GrantRole(dbName+"-reader", roleName).Return(nil)
+				pg.EXPECT().AlterRoleLogin(roleName).Return(nil)
 				pg.EXPECT().GrantRole("rds_iam", roleName).Return(nil)
 				pg.EXPECT().GetDefaultDatabase().Return("postgres").AnyTimes()
 

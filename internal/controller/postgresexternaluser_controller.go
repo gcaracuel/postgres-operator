@@ -180,6 +180,10 @@ func (r *PostgresExternalUserReconciler) reconcileCreate(ctx context.Context, in
 
 	if r.cloudProvider == config.CloudProviderAWS {
 		if awsIamRequested && !instance.Status.EnableIamAuth {
+			// Role needs LOGIN attribute for IAM authentication to work
+			if err := r.pg.AlterRoleLogin(roleName); err != nil {
+				return r.requeue(ctx, instance, fmt.Errorf("alter role %s login: %w", roleName, err))
+			}
 			if err := r.pg.GrantRole("rds_iam", roleName); err != nil {
 				return r.requeue(ctx, instance, fmt.Errorf("grant rds_iam to %s: %w", roleName, err))
 			}
