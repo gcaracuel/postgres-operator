@@ -79,15 +79,6 @@ func (r *PostgresExternalUserReconciler) Reconcile(ctx context.Context, req ctrl
 
 func (r *PostgresExternalUserReconciler) reconcileDelete(ctx context.Context, instance *dbv1alpha1.PostgresExternalUser, reqLogger logr.Logger) (ctrl.Result, error) {
 	if instance.Status.Succeeded && instance.Status.RoleName != "" {
-		db := r.pg.GetDefaultDatabase()
-		postgres, err := r.getPostgresCR(ctx, instance)
-		if err != nil && !errors.IsNotFound(err) {
-			return ctrl.Result{}, err
-		}
-		if postgres != nil && postgres.GetDeletionTimestamp().IsZero() {
-			db = instance.Status.DatabaseName
-		}
-
 		// Revoke group role membership (always do this — it's what this CR added)
 		if instance.Status.GroupRole != "" {
 			if err := r.pg.RevokeRole(instance.Status.GroupRole, instance.Status.RoleName); err != nil {
@@ -105,12 +96,8 @@ func (r *PostgresExternalUserReconciler) reconcileDelete(ctx context.Context, in
 			}
 		}
 
-		// Try to drop the role. If it has other role memberships or owns objects,
-		// the DROP will fail — that's fine, we just leave the role in place.
-		if err := r.pg.DropRole(instance.Status.RoleName, r.pg.GetUser(), db); err != nil {
-			reqLogger.Info("role not dropped (may have other memberships or objects), group role revoked",
-				"role", instance.Status.RoleName, "error", err)
-		}
+		// Do NOT drop the role. DROP ROLE would also remove memberships granted by other CRs.
+		// The role stays in PostgreSQL — only the grants from this CR are removed.
 	}
 
 	controllerutil.RemoveFinalizer(instance, "finalizer.db.movetokube.com")
