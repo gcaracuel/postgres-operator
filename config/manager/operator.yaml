@@ -17,7 +17,9 @@ spec:
         runAsNonRoot: true
       containers:
         - name: ext-postgres-operator
-          image: movetokube/postgres-operator:2.0.0
+          # This is a fork of movetokube/postgres-operator.
+          # Replace with your own image repository when building.
+          image: ghcr.io/gcaracuel/postgres-operator:latest
           imagePullPolicy: Always
           ports:
             - name: metrics
