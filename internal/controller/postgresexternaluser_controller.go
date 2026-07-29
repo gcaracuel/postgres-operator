@@ -184,11 +184,13 @@ func (r *PostgresExternalUserReconciler) reconcileCreate(ctx context.Context, in
 			if err := r.pg.AlterRoleLogin(roleName); err != nil {
 				return r.requeue(ctx, instance, fmt.Errorf("alter role %s login: %w", roleName, err))
 			}
+			// rds_iam is an AWS RDS-specific role; it may not exist in all PostgreSQL instances
 			if err := r.pg.GrantRole("rds_iam", roleName); err != nil {
-				return r.requeue(ctx, instance, fmt.Errorf("grant rds_iam to %s: %w", roleName, err))
+				reqLogger.Error(err, "failed to grant rds_iam (role may not exist in this PostgreSQL instance)", "role", roleName)
+			} else {
+				instance.Status.EnableIamAuth = true
+				grantedExtras = append(grantedExtras, "rds_iam")
 			}
-			instance.Status.EnableIamAuth = true
-			grantedExtras = append(grantedExtras, "rds_iam")
 		}
 
 		if !awsIamRequested && instance.Status.EnableIamAuth {
