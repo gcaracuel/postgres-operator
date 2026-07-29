@@ -1,6 +1,8 @@
 # ext-postgres-operator Helm Chart
 
-This Helm chart deploys the External Postgres Operator, which provides a way to manage PostgreSQL databases and users in a Kubernetes environment.
+> **Fork Notice:** This chart is for a fork of [movetokube/postgres-operator](https://github.com/movetokube/postgres-operator).
+
+The Helm chart repository is still hosted by the original project at `https://movetokube.github.io/postgres-operator/`.
 
 ## Installation
 
