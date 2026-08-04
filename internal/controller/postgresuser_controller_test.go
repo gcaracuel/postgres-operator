@@ -324,6 +324,7 @@ var _ = Describe("PostgresUser Controller", func() {
 				Expect(foundSecret.Data).To(HaveKey("LOGIN"))
 				Expect(foundSecret.Data).To(HaveKey("PASSWORD"))
 				Expect(foundSecret.Data).To(HaveKey("POSTGRES_DOTNET_URL"))
+				Expect(foundSecret.Data).To(HaveKey("POSTGRES_DSN"))
 				Expect(foundSecret.Data).To(HaveKey("POSTGRES_JDBC_URL"))
 				Expect(foundSecret.Data).To(HaveKey("POSTGRES_URL"))
 				Expect(foundSecret.Data).To(HaveKey("ROLE"))
