@@ -1,0 +1,10 @@
+apiVersion: db.movetokube.com/v1alpha1
+kind: PostgresUser
+metadata:
+  name: app1-reader
+  namespace: default
+spec:
+  role: app1-reader
+  database: app-db-1
+  secretName: app1-reader
+  privileges: READ

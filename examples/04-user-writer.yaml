@@ -1,0 +1,10 @@
+apiVersion: db.movetokube.com/v1alpha1
+kind: PostgresUser
+metadata:
+  name: app1-writer
+  namespace: default
+spec:
+  role: app1-writer
+  database: app-db-1
+  secretName: app1-writer
+  privileges: WRITE
