@@ -62,7 +62,7 @@ func (c *pg) ReassignDatabaseOwner(dbName, currentOwner, newOwner string) error 
 		return nil
 	}
 
-	tmpDb, err := GetConnection(c.user, c.pass, c.host, dbName, c.args)
+	tmpDb, err := c.getConnection(dbName)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (c *pg) ReassignDatabaseOwner(dbName, currentOwner, newOwner string) error 
 }
 
 func (c *pg) CreateSchema(db, role, schema string) error {
-	tmpDb, err := GetConnection(c.user, c.pass, c.host, db, c.args)
+	tmpDb, err := c.getConnection(db)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func (c *pg) DropDatabase(database string) error {
 }
 
 func (c *pg) CreateExtension(db, extension string) error {
-	tmpDb, err := GetConnection(c.user, c.pass, c.host, db, c.args)
+	tmpDb, err := c.getConnection(db)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (c *pg) CreateExtension(db, extension string) error {
 }
 
 func (c *pg) SetSchemaPrivileges(schemaPrivileges PostgresSchemaPrivileges) error {
-	tmpDb, err := GetConnection(c.user, c.pass, c.host, schemaPrivileges.DB, c.args)
+	tmpDb, err := c.getConnection(schemaPrivileges.DB)
 	if err != nil {
 		return err
 	}
