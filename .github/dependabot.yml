@@ -8,6 +8,10 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - dependencies
+    groups:
+      actions:
+        patterns:
+          - "*"
   - package-ecosystem: "docker"
     target-branch: "master"
     directory: "/"
