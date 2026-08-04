@@ -37,3 +37,29 @@ rules:
       - deployments
     verbs:
       - "get"
+  - apiGroups:
+      - db.movetokube.com
+    resources:
+      - postgresexternalusers
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - db.movetokube.com
+    resources:
+      - postgresexternalusers/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - db.movetokube.com
+    resources:
+      - postgresexternalusers/finalizers
+    verbs:
+      - update
