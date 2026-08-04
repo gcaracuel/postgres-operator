@@ -1,11 +1,11 @@
-# CONTRIBUTING
+# Contributing
 
-You can contribute to this project by opening a PR to merge to `master`, or one of the `vX.X.X` branches.
+This project is a fork of [movetokube/postgres-operator](https://github.com/movetokube/postgres-operator).
+Contributions are welcome via pull requests.
 
 ## Branching
 
-`master` branch contains the latest source code with all the features. `vX.X.X` contains code for the specific major versions.
- i.e. `v0.4.x` contains the latest code for 0.4 version of the operator. See compatibility matrix below.
+`master` branch contains the latest source code with all the features.
 
 ## Tests
 
