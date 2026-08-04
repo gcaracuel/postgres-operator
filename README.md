@@ -215,12 +215,31 @@ spec:
   database: my-db                # References the Postgres CR
   privileges: READ               # OWNER, READ, or WRITE
   extraRoles:                     # Optional extra roles to grant
-    - rds_iam
+    - some-other-role
   createIfNotExists: true         # Create role if it doesn't exist (default)
+  # AWS IAM authentication (requires POSTGRES_CLOUD_PROVIDER=AWS)
+  # aws:
+  #   enableIamAuth: true        # Grants rds_iam role to this role
 ```
 
 This manages fixed-name PostgreSQL roles without passwords, suitable for externally-managed users (e.g., IAM-authenticated roles on AWS RDS). Unlike `PostgresUser`, no Kubernetes Secret is created.
 
+#### IAM Authentication
+
+Set `aws.enableIamAuth: true` to grant the `rds_iam` role to this role (requires `POSTGRES_CLOUD_PROVIDER=AWS`).
+This is the preferred way to enable IAM auth — do not add `rds_iam` to `extraRoles` manually.
+When IAM auth is enabled, the role is automatically altered to allow login (`ALTER ROLE ... WITH LOGIN`).
+
+#### Deletion Behavior
+
+When a `PostgresExternalUser` CR is deleted:
+1. The group role (OWNER/READ/WRITE) is revoked from the role
+2. Extra roles (except `rds_iam`) are revoked
+3. The role is **not** dropped — it stays in PostgreSQL
+4. `rds_iam` is **never** revoked on deletion (it is managed by the IAM flag, not by CR lifecycle)
+5. If the same `roleName` is used in multiple CRs, deleting one only removes its grants — other grants remain intact
+
+### Multiple operator support
 ### Multiple operator support
 
 Run multiple operator instances by setting unique POSTGRES_INSTANCE values and using annotations in your CRs to assign them.

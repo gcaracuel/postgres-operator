@@ -1,0 +1,109 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: postgresexternalusers.db.movetokube.com
+spec:
+  group: db.movetokube.com
+  names:
+    kind: PostgresExternalUser
+    listKind: PostgresExternalUserList
+    plural: postgresexternalusers
+    singular: postgresexternaluser
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: PostgresExternalUser is the Schema for the postgresexternalusers API.
+          It manages fixed-name PostgreSQL roles without passwords, suitable for
+          externally-managed users (e.g., IAM-authenticated roles on AWS RDS).
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: PostgresExternalUserSpec defines the desired state of PostgresExternalUser
+            properties:
+              roleName:
+                description: |-
+                  Fixed name of the role to create or assign permissions to.
+                  If the role already exists in PostgreSQL, it will be used as-is.
+                  If it does not exist, it will be created without a password (suitable for IAM-managed roles).
+                type: string
+              database:
+                description: Name of the Postgres CR (database) this role will be associated with.
+                type: string
+              privileges:
+                description: |-
+                  Privileges to grant: OWNER, READ, or WRITE.
+                  OWNER grants all privileges on the database schemas.
+                  READ grants SELECT on all tables in the schemas.
+                  WRITE grants SELECT, INSERT, DELETE, UPDATE on all tables in the schemas.
+                type: string
+                enum: [OWNER, READ, WRITE]
+              extraRoles:
+                description: Extra PostgreSQL roles to grant to this role (e.g., "rds_iam" for AWS IAM authentication).
+                items:
+                  type: string
+                type: array
+              createIfNotExists:
+                description: |-
+                  Whether to create the role if it does not exist in PostgreSQL.
+                  If false and the role does not exist, the controller will not create it.
+                type: boolean
+                default: true
+            required:
+            - roleName
+            - database
+            - privileges
+            type: object
+          status:
+            description: PostgresExternalUserStatus defines the observed state of PostgresExternalUser
+            properties:
+              succeeded:
+                type: boolean
+              roleName:
+                description: The role name as it exists in PostgreSQL.
+                type: string
+              groupRole:
+                description: The group role (OWNER/READ/WRITE) this role was granted.
+                type: string
+              databaseName:
+                description: The database name this role is associated with.
+                type: string
+              grantedExtraRoles:
+                description: Extra roles that have been granted to this role.
+                items:
+                  type: string
+                type: array
+              message:
+                description: Human-readable message describing the last action taken on the database.
+                type: string
+            required:
+            - succeeded
+            - roleName
+            - groupRole
+            - databaseName
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

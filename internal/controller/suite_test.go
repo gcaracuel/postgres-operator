@@ -111,7 +111,7 @@ var _ = BeforeSuite(func() {
 		k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 		Expect(k8sClient).NotTo(BeNil())
 	} else {
-		k8sClient = fake.NewClientBuilder().WithScheme(scheme.Scheme).WithStatusSubresource(&v1alpha1.Postgres{}, &v1alpha1.PostgresUser{}).Build()
+		k8sClient = fake.NewClientBuilder().WithScheme(scheme.Scheme).WithStatusSubresource(&v1alpha1.Postgres{}, &v1alpha1.PostgresUser{}, &v1alpha1.PostgresExternalUser{}).Build()
 		managerClient = k8sClient
 	}
 	Expect(k8sClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{

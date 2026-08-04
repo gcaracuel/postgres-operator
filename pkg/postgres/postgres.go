@@ -29,6 +29,7 @@ type PG interface {
 	SetSchemaPrivileges(schemaPrivileges PostgresSchemaPrivileges) error
 	RevokeRole(role, revoked string) error
 	AlterDefaultLoginRole(role, setRole string) error
+	AlterRoleLogin(role string) error
 	DropDatabase(db string) error
 	DropRole(role, newOwner, database string) error
 	GetUser() string

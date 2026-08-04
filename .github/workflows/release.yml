@@ -21,6 +21,10 @@ env:
   REGISTRY: ghcr.io
   REPO_IMAGE_NAME: ${{ github.repository }}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: write

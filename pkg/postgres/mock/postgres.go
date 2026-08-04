@@ -68,6 +68,20 @@ func (mr *MockPGMockRecorder) AlterDefaultLoginRole(role, setRole any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlterDefaultLoginRole", reflect.TypeOf((*MockPG)(nil).AlterDefaultLoginRole), role, setRole)
 }
 
+// AlterRoleLogin mocks base method.
+func (m *MockPG) AlterRoleLogin(role string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AlterRoleLogin", role)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AlterRoleLogin indicates an expected call of AlterRoleLogin.
+func (mr *MockPGMockRecorder) AlterRoleLogin(role any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlterRoleLogin", reflect.TypeOf((*MockPG)(nil).AlterRoleLogin), role)
+}
+
 // CreateDB mocks base method.
 func (m *MockPG) CreateDB(dbname, username string) error {
 	m.ctrl.T.Helper()
