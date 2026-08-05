@@ -23,6 +23,7 @@ Take note of the image SHA:
 
 ```bash
 docker images postgres-operator:master --no-trunc --format "{{.ID}}"
+# Example: sha256:1dd2b5c4355ba44a17adbd751fa1cc5b4e2a2c2ff5479b969db65cbbf2028d0e
 ```
 
 ## 2. Create a Kind Cluster
@@ -117,27 +118,9 @@ EOF
 kubectl -n operators wait --for=condition=ready pod -l app=postgres-server --timeout=120s
 ```
 
-## 5. Create the Operator Secret
+## 5. Install the Helm Chart with the Local Image
 
-```bash
-kubectl -n operators apply -f - <<'EOF'
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ext-postgres-operator
-  namespace: operators
-type: Opaque
-stringData:
-  POSTGRES_HOST: postgres-server.operators.svc.cluster.local:5432
-  POSTGRES_USER: postgres
-  POSTGRES_PASS: testpassword
-  POSTGRES_URI_ARGS: sslmode=disable
-  POSTGRES_CLOUD_PROVIDER: ""
-  POSTGRES_DEFAULT_DATABASE: postgres
-EOF
-```
-
-## 6. Install the Helm Chart with the Local Image
+Helm creates the operator secret automatically from the values below.
 
 ```bash
 helm upgrade --install -n operators ext-postgres-operator ./charts/ext-postgres-operator \
@@ -158,9 +141,9 @@ kubectl -n operators get pods -l app.kubernetes.io/name=ext-postgres-operator
 kubectl -n operators logs -l app.kubernetes.io/name=ext-postgres-operator
 ```
 
-## 7. Create Test Resources
+## 6. Create Test Resources
 
-### 7.1 Create Databases
+### 6.1 Create Databases
 
 ```bash
 # Database 1: app1 with schemas orders, inventory and extension pgcrypto
@@ -174,7 +157,7 @@ kubectl wait --for=condition=ready --timeout=60s postgres/app-db-1
 kubectl wait --for=condition=ready --timeout=60s postgres/app-db-2
 ```
 
-### 7.2 Create Internal Users (with Secrets)
+### 6.2 Create Internal Users (with Secrets)
 
 ```bash
 # Admin user (OWNER privileges on app-db-1)
@@ -190,7 +173,7 @@ kubectl apply -f examples/05-user-reader.yaml
 kubectl get secrets -l app.kubernetes.io/instance=app1-admin -o yaml
 ```
 
-### 7.3 Create External Users (no Secrets, fixed role names)
+### 6.3 Create External Users (no Secrets, fixed role names)
 
 ```bash
 # IAM reader on app-db-1 (with rds_iam extra role)
@@ -204,14 +187,14 @@ kubectl get postgresexternaluser iam-app1-reader -o yaml
 kubectl get postgresexternaluser iam-analytics-reader -o yaml
 ```
 
-### 7.4 Create Analytics Admin User
+### 6.4 Create Analytics Admin User
 
 ```bash
 # Admin user (OWNER privileges on app-db-2)
 kubectl apply -f examples/07-user-owner-analytics.yaml
 ```
 
-### 7.5 Same External Role on Multiple Databases
+### 6.5 Same External Role on Multiple Databases
 
 This tests that deleting one CR does not drop the role if it still has memberships from another CR.
 
@@ -223,7 +206,7 @@ kubectl apply -f examples/08-external-user-reader-app1-on-analytics.yaml
 kubectl get postgresexternaluser -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.roleName}{"\t"}{.spec.database}{"\t"}{.status.succeeded}{"\t"}{.status.message}{"\n"}{end}'
 ```
 
-## 8. Verify Everything
+## 7. Verify Everything
 
 ### Check CR Status
 
@@ -269,9 +252,9 @@ kubectl -n operators exec $POD -- psql -U postgres -d app1 -c "\dn"
 kubectl -n operators exec $POD -- psql -U postgres -d analytics -c "\dn"
 ```
 
-## 9. Test Deletion
+## 8. Test Deletion
 
-### 9.1 Safe Deletion: Same Role on Multiple DBs
+### 8.1 Safe Deletion: Same Role on Multiple DBs
 
 When the same `roleName` is used in two CRs (different databases), deleting one CR should:
 - Revoke the group role that CR granted
@@ -290,14 +273,14 @@ POD=$(kubectl -n operators get pod -l app=postgres-server -o name)
 kubectl -n operators exec $POD -- psql -U postgres -c "\du iam-app1-reader"
 ```
 
-### 9.2 Delete a PostgresUser
+### 8.2 Delete a PostgresUser
 
 ```bash
 # Delete a user and verify the secret is cleaned up
 kubectl delete postgresuser app1-reader
 ```
 
-### 9.3 Delete the Last External User CR
+### 8.3 Delete the Last External User CR
 
 When the last CR for a role is deleted, the role should be dropped (no other memberships).
 
@@ -310,14 +293,14 @@ POD=$(kubectl -n operators get pod -l app=postgres-server -o name)
 kubectl -n operators exec $POD -- psql -U postgres -c "\du iam-app1-reader"
 ```
 
-### 9.4 Delete a Database
+### 8.4 Delete a Database
 
 ```bash
 # Delete a database (with dropOnDelete=false, roles and DB are preserved)
 kubectl delete postgres app-db-2
 ```
 
-## 10. Cleanup
+## 9. Cleanup
 
 ```bash
 # Delete the kind cluster
