@@ -69,6 +69,14 @@ spec:
                   If false and the role does not exist, the controller will not create it.
                 type: boolean
                 default: true
+              aws:
+                description: AWS specific configuration.
+                properties:
+                  enableIamAuth:
+                    default: false
+                    description: Enable IAM authentication for this role (PostgreSQL on AWS RDS only). Grants the rds_iam role to this role, allowing IAM database authentication.
+                    type: boolean
+                type: object
             required:
             - roleName
             - database
@@ -93,6 +101,9 @@ spec:
                 items:
                   type: string
                 type: array
+              enableIamAuth:
+                description: Reflects whether IAM authentication is enabled for this role.
+                type: boolean
               message:
                 description: Human-readable message describing the last action taken on the database.
                 type: string
