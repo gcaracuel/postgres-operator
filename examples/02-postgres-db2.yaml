@@ -1,0 +1,12 @@
+apiVersion: db.movetokube.com/v1alpha1
+kind: Postgres
+metadata:
+  name: app-db-2
+  namespace: default
+spec:
+  database: analytics
+  dropOnDelete: false
+  schemas:
+    - reports
+  extensions:
+    - fuzzystrmatch
