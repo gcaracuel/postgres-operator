@@ -19,11 +19,11 @@ cd /Users/guillermo/Projects/github/gcaracuel/postgres-operator/master
 docker build --no-cache -t postgres-operator:master .
 ```
 
-Take note of the image SHA:
+Get the image SHA:
 
 ```bash
-docker images postgres-operator:master --no-trunc --format "{{.ID}}"
-# Example: sha256:1dd2b5c4355ba44a17adbd751fa1cc5b4e2a2c2ff5479b969db65cbbf2028d0e
+IMAGE_SHA=$(docker images postgres-operator:master --no-trunc --format "{{.ID}}")
+echo "$IMAGE_SHA"
 ```
 
 ## 2. Create a Kind Cluster
@@ -125,7 +125,11 @@ Helm creates the operator secret automatically from the values below.
 ```bash
 helm upgrade --install -n operators ext-postgres-operator ./charts/ext-postgres-operator \
   --set image.repository=postgres-operator \
-  --set image.tag=master \
+  IMAGE_SHA=$(docker images postgres-operator:master --no-trunc --format "{{.ID}}")
+
+helm upgrade --install -n operators ext-postgres-operator ./charts/ext-postgres-operator \
+  --set image.repository=postgres-operator \
+  --set image.tag="master@$IMAGE_SHA" \
   --set image.pullPolicy=Never \
   --set postgres.host=postgres-server.operators.svc.cluster.local:5432 \
   --set postgres.user=postgres \
@@ -329,6 +333,10 @@ Check the values are correct:
 ```bash
 helm template ./charts/ext-postgres-operator \
   --set image.repository=postgres-operator \
-  --set image.tag=master \
+  IMAGE_SHA=$(docker images postgres-operator:master --no-trunc --format "{{.ID}}")
+
+helm upgrade --install -n operators ext-postgres-operator ./charts/ext-postgres-operator \
+  --set image.repository=postgres-operator \
+  --set image.tag="master@$IMAGE_SHA" \
   --set image.pullPolicy=Never
 ```
