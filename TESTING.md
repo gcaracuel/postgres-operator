@@ -19,12 +19,6 @@ cd /Users/guillermo/Projects/github/gcaracuel/postgres-operator/master
 docker build --no-cache -t postgres-operator:master .
 ```
 
-Get the image SHA:
-
-```bash
-docker images postgres-operator:master --no-trunc --format "{{.ID}}"
-```
-
 ## 2. Create a Kind Cluster
 
 ```bash
@@ -42,10 +36,17 @@ EOF
 ## 3. Load the Image into Kind
 
 ```bash
-kind load docker-image postgres-operator:integration-test --name postgres-operator
+kind load docker-image postgres-operator:master --name postgres-operator
 ```
 
-## 4. Start a PostgreSQL Server in the Cluster
+## 4. Pre-pull and Load the PostgreSQL Image
+
+```bash
+docker pull postgres:16-alpine
+kind load docker-image postgres:16-alpine --name postgres-operator
+```
+
+## 5. Start a PostgreSQL Server in the Cluster
 
 Create a namespace and deploy a test PostgreSQL instance:
 
@@ -117,17 +118,15 @@ EOF
 kubectl -n operators wait --for=condition=ready pod -l app=postgres-server --timeout=120s
 ```
 
-## 5. Install the Helm Chart with the Local Image
+## 6. Install the Helm Chart with the Local Image
 
 Helm creates the operator secret automatically from the values below.
 
 ```bash
 helm upgrade --install -n operators ext-postgres-operator ./charts/ext-postgres-operator \
   --set image.repository=postgres-operator \
-  helm upgrade --install -n operators ext-postgres-operator ./charts/ext-postgres-operator \
-  --set image.repository=postgres-operator \
   --set image.tag=master \
-  --set image.pullPolicy=Never \
+  --set image.pullPolicy=Always \
   --set postgres.host=postgres-server.operators.svc.cluster.local:5432 \
   --set postgres.user=postgres \
   --set postgres.password=testpassword \
@@ -142,7 +141,7 @@ kubectl -n operators get pods -l app.kubernetes.io/name=ext-postgres-operator
 kubectl -n operators logs -l app.kubernetes.io/name=ext-postgres-operator
 ```
 
-## 6. Create Test Resources
+## 7. Create Test Resources
 
 ### 6.1 Create Databases
 
@@ -207,7 +206,7 @@ kubectl apply -f examples/08-external-user-reader-app1-on-analytics.yaml
 kubectl get postgresexternaluser -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.roleName}{"\t"}{.spec.database}{"\t"}{.status.succeeded}{"\t"}{.status.message}{"\n"}{end}'
 ```
 
-## 7. Verify Everything
+## 8. Verify Everything
 
 ### Check CR Status
 
@@ -253,7 +252,7 @@ kubectl -n operators exec $POD -- psql -U postgres -d app1 -c "\dn"
 kubectl -n operators exec $POD -- psql -U postgres -d analytics -c "\dn"
 ```
 
-## 8. Test Deletion
+## 9. Test Deletion
 
 ### 8.1 Safe Deletion: Same Role on Multiple DBs
 
@@ -301,7 +300,7 @@ kubectl -n operators exec $POD -- psql -U postgres -c "\du iam-app1-reader"
 kubectl delete postgres app-db-2
 ```
 
-## 9. Cleanup
+## 10. Cleanup
 
 ```bash
 # Delete the kind cluster
@@ -330,8 +329,10 @@ Check the values are correct:
 ```bash
 helm template ./charts/ext-postgres-operator \
   --set image.repository=postgres-operator \
-  helm upgrade --install -n operators ext-postgres-operator ./charts/ext-postgres-operator \
+  IMAGE_SHA=$(docker images postgres-operator:master --no-trunc --format "{{.ID}}")
+
+helm upgrade --install -n operators ext-postgres-operator ./charts/ext-postgres-operator \
   --set image.repository=postgres-operator \
-  --set image.tag=master \
+  --set image.tag="master@$IMAGE_SHA" \
   --set image.pullPolicy=Never
 ```
