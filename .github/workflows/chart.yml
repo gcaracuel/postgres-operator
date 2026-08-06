@@ -33,25 +33,18 @@ jobs:
         with:
           version: v3.18.2
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@a0d2dc62c5e491af8ef6ba64a2e02bcf3fb33aa1 # was: helm/chart-releaser-action@v1.7.0
-        id: cr
-        with:
-          charts_dir: charts
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          CR_SKIP_EXISTING: "true"
+      - name: Package Helm chart
+        run: |
+          helm package charts/ext-postgres-operator --destination .cr-release-packages
 
-      - if: ${{ steps.cr.outputs.changed_charts }}
-        name: Login to GitHub Container Registry
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # was: docker/login-action@v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - if: ${{ steps.cr.outputs.changed_charts }}
-        name: Push Charts to GHCR
+      - name: Push Charts to GHCR
         run: |
           for pkg in .cr-release-packages/*; do
             if [ -z "${pkg:-}" ]; then
