@@ -1,0 +1,10 @@
+apiVersion: db.movetokube.com/v1alpha1
+kind: PostgresUser
+metadata:
+  name: analytics-admin
+  namespace: default
+spec:
+  role: analytics-admin
+  database: app-db-2
+  secretName: analytics-admin
+  privileges: OWNER

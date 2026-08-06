@@ -1,0 +1,13 @@
+apiVersion: db.movetokube.com/v1alpha1
+kind: Postgres
+metadata:
+  name: app-db-1
+  namespace: default
+spec:
+  database: app1
+  dropOnDelete: false
+  schemas:
+    - orders
+    - inventory
+  extensions:
+    - pgcrypto

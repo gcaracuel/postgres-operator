@@ -1,0 +1,12 @@
+apiVersion: db.movetokube.com/v1alpha1
+kind: PostgresExternalUser
+metadata:
+  name: iam-analytics-reader
+  namespace: default
+spec:
+  roleName: iam-analytics-reader
+  database: app-db-2
+  privileges: READ
+  aws:
+    enableIamAuth: true
+  createIfNotExists: true
