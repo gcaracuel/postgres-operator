@@ -73,19 +73,17 @@ Set environment variables in [`config/manager/operator.yaml`](config/manager/ope
 
 ### Install Using Helm (Recommended)
 
-The Helm chart for this operator is located in the `charts/ext-postgres-operator` subdirectory. Follow these steps to install:
+The Helm chart for this operator is published as an OCI artifact on GitHub Container Registry.
 
-1. Add the Helm repository:
-   ```bash
-   helm repo add ext-postgres-operator https://movetokube.github.io/postgres-operator/
-   ```
+```bash
+# Install the latest release
+helm install -n operators ext-postgres-operator oci://ghcr.io/gcaracuel/postgres-operator/charts/ext-postgres-operator
 
-2. Install the operator:
-   ```bash
-   helm install -n operators ext-postgres-operator ext-postgres-operator/ext-postgres-operator
-   ```
+# Install a specific version
+helm install -n operators ext-postgres-operator oci://ghcr.io/gcaracuel/postgres-operator/charts/ext-postgres-operator --version 1.0.0
+```
 
-3. Customize the installation by modifying the values in [values.yaml](charts/ext-postgres-operator/values.yaml).
+Customize the installation by modifying the values in [values.yaml](charts/ext-postgres-operator/values.yaml) or passing `--set` flags to the install command.
 
 ### Install Using Kustomize
 
@@ -240,7 +238,6 @@ When a `PostgresExternalUser` CR is deleted:
 5. If the same `roleName` is used in multiple CRs, deleting one only removes its grants — other grants remain intact
 
 ### Multiple operator support
-### Multiple operator support
 
 Run multiple operator instances by setting unique POSTGRES_INSTANCE values and using annotations in your CRs to assign them.
 
@@ -281,6 +278,55 @@ Postgres operator compatibility with Operator SDK version is in the table below
 | `postgres-operator 2.x.x` | v1.39                |  v1                  |
 | `HEAD`                    | v1.39                |  v1                  |
 
+
+## Releasing
+
+This project uses an automated CI/CD pipeline to publish releases. Here's how it works:
+
+### Creating a Release
+
+1. Ensure the code on `master` is ready for release.
+2. Create and push a signed tag following semantic versioning (e.g., `v1.2.3`):
+
+   ```bash
+   git tag -a v1.2.3 -m "Release v1.2.3"
+   git push origin v1.2.3
+   ```
+
+3. The CI pipeline automatically handles the rest (see below).
+
+### What Gets Published
+
+All artifacts are published to **GitHub Container Registry (GHCR)** under `ghcr.io/gcaracuel/postgres-operator`.
+
+| Artifact | Tag format | Example | Trigger |
+|---|---|---|---|
+| Docker image | Strip `v` prefix from git tag | `v1.2.3` → `1.2.3`, `1.2` | Git tag push |
+| Helm chart | Strip `v` prefix from git tag | `v1.2.3` → chart `version: 1.2.3`, `appVersion: "1.2.3"` | Git tag push |
+
+#### Docker Image
+
+- Tags: semver (`1.2.3`, `1.2`), branch (`master`), and commit SHA.
+- `latest` tag follows the highest semver version.
+- Platforms: `linux/amd64` and `linux/arm64`.
+- Workflow: `.github/workflows/release.yml`
+
+#### Helm Chart (OCI)
+
+- Published as an OCI artifact: `oci://ghcr.io/gcaracuel/postgres-operator/charts/ext-postgres-operator`
+- On a tag push, the workflow dynamically sets both `version` and `appVersion` in `Chart.yaml` to the tag stripped of its `v` prefix (e.g., `v1.2.3` → `1.2.3`).
+- This means the chart's **default image tag** (from `appVersion`) always matches the Docker image published for that release.
+- Workflow: `.github/workflows/chart.yml`
+
+#### Installing a Release
+
+```bash
+# Pull a specific chart version
+helm pull oci://ghcr.io/gcaracuel/postgres-operator/charts/ext-postgres-operator --version 1.2.3
+
+# Install a specific chart version (pulls docker image 1.2.3 by default)
+helm install -n operators ext-postgres-operator oci://ghcr.io/gcaracuel/postgres-operator/charts/ext-postgres-operator --version 1.2.3
+```
 
 ## Contributing
 
