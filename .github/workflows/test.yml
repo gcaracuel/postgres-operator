@@ -23,7 +23,7 @@ jobs:
           go-version: "stable"
       - run: |
           go clean -modcache
-          go test -v ./internal/controller/... -count=1 2>&1
+          make test
   build:
     runs-on: ubuntu-latest
     name: Go build
