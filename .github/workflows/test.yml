@@ -21,9 +21,10 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # was: actions/setup-go@v7.0.0
         with:
           go-version: "stable"
-      - run: |
-          go clean -modcache
-          make test
+      - run: go version
+      - run: go clean -modcache
+      - run: make test
+
   build:
     runs-on: ubuntu-latest
     name: Go build
