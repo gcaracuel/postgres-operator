@@ -21,8 +21,9 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # was: actions/setup-go@v7.0.0
         with:
           go-version: "stable"
-      - run: go clean -modcache
-      - run: go test -v ./internal/controller/... -count=1 2>&1
+      - run: |
+          go clean -modcache
+          go test -v ./internal/controller/... -count=1 2>&1
   build:
     runs-on: ubuntu-latest
     name: Go build
