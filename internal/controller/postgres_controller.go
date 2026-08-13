@@ -234,19 +234,9 @@ func (r *PostgresReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		instance.Status.Schemas = append(instance.Status.Schemas, schema)
 	}
 
-	// Determine which schemas to configure privileges on.
-	// When no schemas are specified, default to the "public" schema which
-	// exists in every PostgreSQL database. Without this fallback, ALTER DEFAULT
-	// PRIVILEGES is never executed and objects created by one user remain
-	// invisible to other users with the appropriate role.
-	schemasForPrivileges := instance.Spec.Schemas
-	if len(schemasForPrivileges) == 0 {
-		schemasForPrivileges = []string{"public"}
-	}
-
 	creatorRoles := []string{owner, writer}
 
-	for _, schema := range schemasForPrivileges {
+	for _, schema := range instance.Spec.Schemas {
 		for _, creatorRole := range creatorRoles {
 
 			schemaPrivilegesReader := postgres.PostgresSchemaPrivileges{
