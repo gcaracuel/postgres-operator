@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	rdsauth "github.com/aws/aws-sdk-go-v2/feature/rds/auth"
@@ -98,10 +99,16 @@ func defaultGenerateIAMAuthToken(ctx context.Context, user, host, region string)
 func NewPG(cfg *config.Cfg, logger logr.Logger) (PG, error) {
 	password := cfg.PostgresPass
 
+	// Create a context with timeout for the initial connection.
+	// This prevents the operator from hanging at startup if RDS is unreachable
+	// or the IRSA credentials cannot be retrieved.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	// When IAM auth is enabled, generate a token to use as the password
 	if cfg.PostgresUseIAMAuth && cfg.CloudProvider == config.CloudProviderAWS {
 		logger.Info("Using IAM database authentication for RDS")
-		token, err := generateIAMAuthToken(context.Background(), cfg.PostgresUser, cfg.PostgresHost, cfg.AwsRegion)
+		token, err := generateIAMAuthToken(ctx, cfg.PostgresUser, cfg.PostgresHost, cfg.AwsRegion)
 		if err != nil {
 			return nil, fmt.Errorf("IAM auth token generation failed: %w", err)
 		}
@@ -176,9 +183,12 @@ func (c *pg) getConnection(database string) (*sql.DB, error) {
 }
 
 // getConnectionWithIAMAuth opens a connection using IAM database authentication.
-// It generates a fresh IAM auth token for each connection.
+// It generates a fresh IAM auth token for each connection, with a 30-second timeout.
 func (c *pg) getConnectionWithIAMAuth(database string) (*sql.DB, error) {
-	token, err := generateIAMAuthToken(context.Background(), c.user, c.host, c.awsRegion)
+	tokenCtx, tokenCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer tokenCancel()
+
+	token, err := generateIAMAuthToken(tokenCtx, c.user, c.host, c.awsRegion)
 	if err != nil {
 		return nil, fmt.Errorf("IAM auth token generation failed: %w", err)
 	}
