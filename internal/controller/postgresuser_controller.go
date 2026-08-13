@@ -157,11 +157,8 @@ func (r *PostgresUserReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			groupRole = database.Status.Roles.Reader
 		case "WRITE":
 			groupRole = database.Status.Roles.Writer
-		case "OWNER":
-			groupRole = database.Status.Roles.Owner
 		default:
-			err = fmt.Errorf("invalid privileges value %q: must be READ, WRITE, or OWNER", instance.Spec.Privileges)
-			return r.requeue(ctx, instance, err)
+			groupRole = database.Status.Roles.Owner
 		}
 
 		err = r.pg.GrantRole(groupRole, role)
@@ -242,11 +239,8 @@ func (r *PostgresUserReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				desiredGroup = database.Status.Roles.Reader
 			case "WRITE":
 				desiredGroup = database.Status.Roles.Writer
-			case "OWNER":
-				desiredGroup = database.Status.Roles.Owner
 			default:
-				err = fmt.Errorf("invalid privileges value %q: must be READ, WRITE, or OWNER", instance.Spec.Privileges)
-				return r.requeue(ctx, instance, err)
+				desiredGroup = database.Status.Roles.Owner
 			}
 
 			// Ability user to be reassigned to another group role
