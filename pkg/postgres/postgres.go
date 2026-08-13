@@ -107,15 +107,21 @@ func NewPG(cfg *config.Cfg, logger logr.Logger) (PG, error) {
 
 	// When IAM auth is enabled, generate a token to use as the password
 	if cfg.PostgresUseIAMAuth && cfg.CloudProvider == config.CloudProviderAWS {
-		logger.Info("Using IAM database authentication for RDS")
+		logger.Info("Using IAM database authentication for RDS",
+			"region", cfg.AwsRegion,
+			"host", cfg.PostgresHost,
+			"user", cfg.PostgresUser)
 		token, err := generateIAMAuthToken(ctx, cfg.PostgresUser, cfg.PostgresHost, cfg.AwsRegion)
 		if err != nil {
 			return nil, fmt.Errorf("IAM auth token generation failed: %w", err)
 		}
-		logger.Info("Successfully generated IAM auth token, connecting to RDS")
+		logger.Info("Successfully generated IAM auth token")
 		password = token
 	}
 
+	logger.Info("Connecting to PostgreSQL",
+		"host", cfg.PostgresHost,
+		"database", cfg.PostgresDefaultDb)
 	db, err := GetConnection(
 		cfg.PostgresUser,
 		password,
@@ -123,9 +129,12 @@ func NewPG(cfg *config.Cfg, logger logr.Logger) (PG, error) {
 		cfg.PostgresDefaultDb,
 		cfg.PostgresUriArgs)
 	if err != nil {
+		logger.Error(err, "Failed to connect to PostgreSQL",
+			"host", cfg.PostgresHost,
+			"database", cfg.PostgresDefaultDb)
 		return nil, err
 	}
-	logger.Info("connected to postgres server")
+	logger.Info("Connected to PostgreSQL server")
 	postgres := &pg{
 		db:              db,
 		log:             logger,
@@ -186,13 +195,19 @@ func (c *pg) getConnection(database string) (*sql.DB, error) {
 // getConnectionWithIAMAuth opens a connection using IAM database authentication.
 // It generates a fresh IAM auth token for each connection, with a 30-second timeout.
 func (c *pg) getConnectionWithIAMAuth(database string) (*sql.DB, error) {
+	c.log.V(1).Info("Generating fresh IAM auth token for temporary connection",
+		"database", database,
+		"host", c.host,
+		"user", c.user)
+
 	tokenCtx, tokenCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer tokenCancel()
 
 	token, err := generateIAMAuthToken(tokenCtx, c.user, c.host, c.awsRegion)
 	if err != nil {
-		return nil, fmt.Errorf("IAM auth token generation failed: %w", err)
+		return nil, fmt.Errorf("IAM auth token generation for %s failed: %w", database, err)
 	}
+
 	return GetConnection(c.user, token, c.host, database, c.args)
 }
 
