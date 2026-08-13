@@ -48,7 +48,7 @@ spec:
             - name: metrics
               containerPort: 8080
               protocol: "TCP"
-          {{- if or .Values.existingSecret .Values.externalSecret.secretStore (not .Values.irsa.enabled) }}
+          {{- if not .Values.irsa.enabled }}
           envFrom:
             - secretRef:
                 {{- if .Values.existingSecret }}
