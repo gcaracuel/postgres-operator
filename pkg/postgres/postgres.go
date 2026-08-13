@@ -112,6 +112,7 @@ func NewPG(cfg *config.Cfg, logger logr.Logger) (PG, error) {
 		if err != nil {
 			return nil, fmt.Errorf("IAM auth token generation failed: %w", err)
 		}
+		logger.Info("Successfully generated IAM auth token, connecting to RDS")
 		password = token
 	}
 
@@ -124,7 +125,7 @@ func NewPG(cfg *config.Cfg, logger logr.Logger) (PG, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger.V(1).Info("connected to postgres server")
+	logger.Info("connected to postgres server")
 	postgres := &pg{
 		db:              db,
 		log:             logger,
