@@ -95,6 +95,19 @@ postgres:
 # instead of a static password. Requires the RDS instance to have IAM database
 # authentication enabled and a database user mapped to the IAM role.
 # See the README for a full setup guide.
+#
+# When irsa.enabled=true:
+#   - The default Secret with PostgreSQL credentials is NOT created
+#   - The deployment does NOT reference any secret via envFrom
+#   - POSTGRES_PASS is not needed (replaced by IAM auth token)
+#   - POSTGRES_USE_IAM_AUTH and AWS_REGION are injected automatically
+#   - POSTGRES_HOST and POSTGRES_USER must be provided via:
+#       - existingSecret, or
+#       - externalSecret, or
+#       - env (extra env vars)
+#   - POSTGRES_CLOUD_PROVIDER should be set to "AWS"
+#     (can be set via env.POSTGRES_CLOUD_PROVIDER)
+#   - POSTGRES_DEFAULT_DATABASE can be set via env.POSTGRES_DEFAULT_DATABASE
 irsa:
   # Enable IRSA and IAM database authentication
   enabled: false
@@ -113,9 +126,17 @@ volumeMounts: []
 # Existing secret where values to connect to Postgres are defined.
 # If not set a new secret will be created, filled with information under the postgres key above.
 # If ExternalSecret is set, existingSecret is ignored.
+# When irsa.enabled=true, this can be used to provide POSTGRES_HOST and POSTGRES_USER
+# without needing POSTGRES_PASS (IAM auth replaces the password).
+# When irsa.enabled=true and existingSecret is set, the deployment references it
+# via envFrom (skipping the default secret creation).
 existingSecret: ""
 
 # Support for ExternalSecret Operator to fetch Postgres credentials from an external secret store.
+# When irsa.enabled=true, the ExternalSecret only needs to provide POSTGRES_HOST and POSTGRES_USER.
+# POSTGRES_PASS is not needed (IAM auth replaces the password).
+# When irsa.enabled=true and externalSecret is set, the deployment references the
+# resulting secret via envFrom (skipping the default secret creation).
 externalSecret: {}
   # secretStore: "aws-secretsmanager-euc1"                   # (Mandatory) Name of the SecretStore or ClusterSecretStore to reference in the ExternalSecret
   # remoteKey: "rds!db-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Mandatory) Remote key in the external secret store where Postgres credentials are stored

@@ -120,13 +120,69 @@ postgres:
   default_database: postgres
 ```
 
+### IRSA and Secrets
+
+When `irsa.enabled=true`, the chart behaves differently regarding secrets:
+
+- **No default Secret is created** — the default `Secret` template is skipped
+  entirely since `POSTGRES_PASS` is not needed (IAM generates an auth token)
+- **No `envFrom` is injected** — the deployment does not reference any secret
+  unless `existingSecret` or `externalSecret` is explicitly configured
+- **`POSTGRES_USE_IAM_AUTH` and `AWS_REGION`** are set automatically via
+  direct environment variables in the deployment
+
+#### Providing POSTGRES_HOST and POSTGRES_USER
+
+When IRSA is enabled, the operator still needs `POSTGRES_HOST` and
+`POSTGRES_USER` (and optionally `POSTGRES_CLOUD_PROVIDER`,
+`POSTGRES_DEFAULT_DATABASE`, `POSTGRES_URI_ARGS`). These can be provided
+in one of three ways:
+
+**Option A — Use `existingSecret`:** Create your own secret with just the
+needed fields (no `POSTGRES_PASS` required):
+
+```yaml
+# Reference an existing secret you manage
+existingSecret: my-operator-credentials
+# The secret should contain:
+#   POSTGRES_HOST
+#   POSTGRES_USER
+#   POSTGRES_CLOUD_PROVIDER (optional)
+#   POSTGRES_DEFAULT_DATABASE (optional)
+#   POSTGRES_URI_ARGS (optional)
+```
+
+**Option B — Use `externalSecret`:** Fetch the connection details from an
+external secrets provider:
+
+```yaml
+externalSecret:
+  secretStore: my-aws-secretsmanager
+  remoteKey: my-db-credentials
+  # The remote secret should contain:
+  #   username (for POSTGRES_USER)
+  #   password (ignored when IRSA is enabled)
+```
+
+**Option C — Use direct `env` vars:** Set them inline in the chart values:
+
+```yaml
+env:
+  POSTGRES_HOST: "mydb.xxxxxx.REGION.rds.amazonaws.com:5432"
+  POSTGRES_USER: "db_user"
+  POSTGRES_CLOUD_PROVIDER: "AWS"
+  POSTGRES_DEFAULT_DATABASE: "postgres"
+  POSTGRES_URI_ARGS: "sslmode=require"
+```
+
 ### How it works
 
 1. The Helm chart annotates the operator's service account with `eks.amazonaws.com/role-arn`, associating it with the IAM role
-2. When the operator starts, it detects `POSTGRES_USE_IAM_AUTH=true` and `POSTGRES_CLOUD_PROVIDER=AWS`
-3. The operator uses the AWS SDK to generate a 15-minute IAM authentication token via `rds.GenerateDBAuthToken`
-4. The token is used as the password in the PostgreSQL connection string
-5. Each temporary connection (for schema creation, extension management, etc.) gets a fresh token
+2. When IRSA is enabled, the chart skips creating the default Secret and does not inject `envFrom` into the deployment — `POSTGRES_USE_IAM_AUTH` and `AWS_REGION` are set directly as environment variables
+3. When the operator starts, it detects `POSTGRES_USE_IAM_AUTH=true` and `POSTGRES_CLOUD_PROVIDER=AWS`
+4. The operator uses the AWS SDK to generate a 15-minute IAM authentication token via `rds.GenerateDBAuthToken`
+5. The token is used as the password in the PostgreSQL connection string
+6. Each temporary connection (for schema creation, extension management, etc.) gets a fresh token
 
 ### Troubleshooting
 
