@@ -615,12 +615,16 @@ var _ = Describe("PostgresReconciler", func() {
 			It("should not try to create schemas", func() {
 				// CreateSchema should not be called
 				pg.EXPECT().CreateSchema(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				// Default privileges are set on the "public" schema when none are specified
+				pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).Times(6)
 				// Call Reconcile
 				err := runReconcile(rp, ctx, req)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should not set status", func() {
+				// Default privileges are set on the "public" schema when none are specified
+				pg.EXPECT().SetSchemaPrivileges(gomock.Any()).Return(nil).Times(6)
 				// Call reconcile
 				err := runReconcile(rp, ctx, req)
 				Expect(err).NotTo(HaveOccurred())
