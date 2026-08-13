@@ -176,6 +176,45 @@ func (r *PostgresUserReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return r.requeue(ctx, instance, errors.NewInternalError(err))
 		}
 
+		// Also set default privileges for the user role as creator, so that
+		// even if objects are created under the user's own identity (rather
+		// than the group role via ALTER ROLE SET ROLE), the group roles can
+		// still access them.
+		owner := database.Status.Roles.Owner
+		reader := database.Status.Roles.Reader
+		writer := database.Status.Roles.Writer
+		schemas := database.Spec.Schemas
+		if len(schemas) == 0 {
+			schemas = []string{"public"}
+		}
+		for _, schema := range schemas {
+			for _, target := range []struct {
+				role    string
+				privs   string
+				seqPriv string
+				fnPriv  string
+				create  bool
+			}{
+				{role: reader, privs: "SELECT", create: false},
+				{role: writer, privs: "SELECT,INSERT,DELETE,UPDATE", seqPriv: "USAGE,SELECT", fnPriv: "EXECUTE", create: true},
+				{role: owner, privs: "ALL", seqPriv: "ALL", fnPriv: "ALL", create: true},
+			} {
+				sp := postgres.PostgresSchemaPrivileges{
+					DB:            database.Spec.Database,
+					Role:          target.role,
+					CreatorRole:   role,
+					Schema:        schema,
+					Privs:         target.privs,
+					SequencePrivs: target.seqPriv,
+					FunctionPrivs: target.fnPriv,
+					CreateSchema:  target.create,
+				}
+				if err := r.pg.SetSchemaPrivileges(sp); err != nil {
+					return r.requeue(ctx, instance, errors.NewInternalError(err))
+				}
+			}
+		}
+
 		instance.Status.PostgresRole = role
 		instance.Status.PostgresGroup = groupRole
 		instance.Status.PostgresLogin = login
