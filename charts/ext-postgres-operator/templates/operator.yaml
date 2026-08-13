@@ -6,10 +6,10 @@ metadata:
     {{- include "chart.labels" . | nindent 4 }}
   namespace: {{ .Release.Namespace }}
   annotations:
-    {{- if and (not .Values.irsa.enabled) (not .Values.externalSecret) }}
+    {{- if and (not .Values.irsa.enabled) (not .Values.externalSecret.secretStore) }}
     checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     {{- end }}
-    {{- if and (not .Values.irsa.enabled) .Values.externalSecret }}
+    {{- if and (not .Values.irsa.enabled) .Values.externalSecret.secretStore }}
     checksum/external-secret: {{ include (print $.Template.BasePath "/external-secret.yaml") . | sha256sum }}
     {{- end }}
   {{- with .Values.deploymentAnnotations }}
@@ -48,7 +48,7 @@ spec:
             - name: metrics
               containerPort: 8080
               protocol: "TCP"
-          {{- if or .Values.existingSecret .Values.externalSecret (not .Values.irsa.enabled) }}
+          {{- if or .Values.existingSecret .Values.externalSecret.secretStore (not .Values.irsa.enabled) }}
           envFrom:
             - secretRef:
                 {{- if .Values.existingSecret }}
