@@ -6,10 +6,10 @@ metadata:
     {{- include "chart.labels" . | nindent 4 }}
   namespace: {{ .Release.Namespace }}
   annotations:
-    {{- if not .Values.externalSecret }}
+    {{- if and (not .Values.irsa.enabled) (not .Values.externalSecret) }}
     checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     {{- end }}
-    {{- if .Values.externalSecret }}
+    {{- if and (not .Values.irsa.enabled) .Values.externalSecret }}
     checksum/external-secret: {{ include (print $.Template.BasePath "/external-secret.yaml") . | sha256sum }}
     {{- end }}
   {{- with .Values.deploymentAnnotations }}
@@ -48,6 +48,7 @@ spec:
             - name: metrics
               containerPort: 8080
               protocol: "TCP"
+          {{- if or .Values.existingSecret .Values.externalSecret (not .Values.irsa.enabled) }}
           envFrom:
             - secretRef:
                 {{- if .Values.existingSecret }}
@@ -55,6 +56,7 @@ spec:
                 {{- else }}
                 name: {{ include "chart.fullname" . }}
                 {{- end }}
+          {{- end }}
           env:
             - name: WATCH_NAMESPACE
               value: {{ .Values.watchNamespace | default "" }}
