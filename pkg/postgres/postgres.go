@@ -158,7 +158,20 @@ func (c *pg) GetDefaultDatabase() string {
 // When useIAMAuth is true and the cloud provider is AWS, it generates an IAM
 // auth token to use as the password instead of the static password.
 func GetConnection(user, password, host, database, uriArgs string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", fmt.Sprintf("postgresql://%s:%s@%s/%s?%s", user, password, host, database, uriArgs))
+	// Split host:port for keyword-value format
+	hostname, portStr, err := net.SplitHostPort(host)
+	if err != nil {
+		hostname = host
+		portStr = "5432"
+	}
+
+	// Use keyword-value format to avoid URL parsing issues.
+	// IAM auth tokens contain URL-special characters (:, ?, &, =, /)
+	// which break the postgresql://user:pass@host/db?args URL format.
+	uriArgs = strings.TrimPrefix(uriArgs, "?")
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s %s",
+		hostname, portStr, user, password, database, uriArgs)
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, err
 	}
